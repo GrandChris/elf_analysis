@@ -1,0 +1,46 @@
+name: Tests
+
+on: [push]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow#configuring-a-build-matrix
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Checkout submodule
+      run: git submodule init && git submodule update
+
+    - name: Build docker images
+      run: docker build ./ --file .devcontainer/Dockerfile -t local_docker_image
+
+      # Build and test debug version
+
+    - name: Configure CMake debug
+      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/cmake_configure.sh"
+
+    - name: Build
+      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/build_debug.sh"
+
+    - name: Test
+      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/test.sh"
+
+      # Build and test release version
+
+    - name: Configure CMake release
+
+    - name: Build
+      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/build_release.sh"
+
+    - name: Test
+      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/test.sh"

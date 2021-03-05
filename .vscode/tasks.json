@@ -1,0 +1,63 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "source",
+            "args": [
+                "./scripts/clean.sh"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "cmake_configure",
+            "type": "shell",
+            "command": "source",
+            "args": [
+                "./scripts/cmake_configure.sh"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build debug",
+            "type": "shell", 
+            "command": "source",
+            "args": [
+                "./scripts/build_debug.sh"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["relative", "${workspaceRoot}/build"]
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            }
+        },
+        {
+            "label": "run",
+            "type": "shell",
+            "command": "source",
+            "args": [
+                "./scripts/run.sh"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "dependsOn": "build"
+        }
+    ]
+}
