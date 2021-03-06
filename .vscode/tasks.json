@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "clean",
+            "label": "Clean",
             "type": "shell",
             "command": "source",
             "args": [
@@ -13,7 +13,7 @@
             "problemMatcher": []
         },
         {
-            "label": "cmake_configure",
+            "label": "CMake Configure",
             "type": "shell",
             "command": "source",
             "args": [
@@ -22,11 +22,44 @@
             "problemMatcher": []
         },
         {
-            "label": "build debug",
+            "label": "CMake Configure Emscripten",
+            "type": "shell",
+            "command": "source",
+            "args": [
+                "./scripts/cmake_configure_emcc.sh"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Debug",
             "type": "shell", 
             "command": "source",
             "args": [
                 "./scripts/build_debug.sh"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["relative", "${workspaceRoot}/build"]
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            }
+        },
+        {
+            "label": "Build Debug Emscirpten",
+            "type": "shell", 
+            "command": "source",
+            "args": [
+                "./scripts/build_debug_emcc.sh"
             ],
             "group": {
                 "kind": "build",
