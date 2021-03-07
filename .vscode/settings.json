@@ -59,7 +59,8 @@
         "chrono": "cpp",
         "ratio": "cpp",
         "cstring": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "codecvt": "cpp"
     },
     "editor.detectIndentation": false
 }

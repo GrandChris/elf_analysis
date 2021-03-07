@@ -1,2 +1,2 @@
 rm -r ./build/*
-# rm -r ./build_emcc/*
+rm -r ./build_emcc/*

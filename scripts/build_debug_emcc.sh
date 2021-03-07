@@ -1,5 +1,5 @@
 
-if ! test -f "build/CMakeCache.txt"; then
+if ! test -f "build_emcc/CMakeCache.txt"; then
     source scripts/cmake_configure_emcc.sh
 fi
 

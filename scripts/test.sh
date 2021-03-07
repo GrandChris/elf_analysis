@@ -1,2 +1,2 @@
-cd build
-ctest
+echo "running unit tests"
+./build/test/unit_tests

@@ -16,8 +16,8 @@
 #endif
 #endif
 
-
-
+#include "arm_thumb_bl.h"
+#include "dwarf/dwarf++.hh"
 #include "elf/elf++.hh"
 #include "elf_file_loader.h"
 #include <iostream>
@@ -25,44 +25,209 @@
 
 using namespace std;
 
+void print_line_table(const dwarf::line_table &lt)
+    {
+        for (auto const &line : lt)
+        {
+            if (line.end_sequence)
+            {
+                cout << endl;
+            }
+            else
+            {
+                cout << line.file->path << " " << line.line << " " << line.address << endl;
+            }
+        }
+}
 
-int main(int argc, char **argv) {
-    try {
+struct file_table_entry {
+    uint32_t address;
+    string line;
+};
+
+void add_lines(std::vector<file_table_entry> & table, const dwarf::line_table &lt) {
+
+    for(auto const & line : lt)
+    {
+        if(line.end_sequence) {
+            //cout << endl;
+        }
+        else {
+            uint32_t address = line.address;
+            string line_str = line.file->path + ":" + to_string(line.line) + ":" + to_string(line.column);
+            table.push_back({address, line_str});
+        }
+    }
+
+
+}
+
+
+void main_print() {
+    cout << "Hello World!" << endl;
+}
+
+int main(int argc, char **argv)
+{
+    main_print();
+
+    try
+    {
 
         string filename = "";
 
-        if(argc != 2) {
-            cout << "usage: " << argv[0] << " " << "elf-file" << endl;
-            filename = "./build/elf_analysis";
+        if (argc != 2)
+        {
+            cout << "usage: " << argv[0] << " "
+                    << "elf-file" << endl;
+            // filename = "./build/app/app";
+            filename = "./test/NucleoProject.elf";
             // return 2;
         }
-        else {
+        else
+        {
             filename = argv[1];
-        }        
-
-        auto const loader = std::make_shared<elf_file_loader>(filename);
-
-
-        elf::elf elf_file(loader);
-
-        auto const & hdr = elf_file.get_hdr();
-        
-        cout << "elf entry: "  << hdr.entry << endl;
-
-        for(auto const & sec : elf_file.sections()) {
-            auto const & hdr = sec.get_hdr();
-            cout << "section " << sec.get_name() << " " <<  hdr.addr 
-                << " " << hdr.offset << " "  <<  hdr.size << endl;
         }
+
+        // Load file
+        auto const loader = std::make_shared<elf_file_loader>(filename);
+        elf::elf ef(loader);
+
+        // Print elf sections
+        auto const &hdr = ef.get_hdr();
+
+        cout << "elf entry: " << hdr.entry << endl;
+
+        for (auto const &sec : ef.sections())
+        {
+            auto const &hdr = sec.get_hdr();
+            cout << "section " << sec.get_name() << " " << hdr.addr
+                    << " " << hdr.offset << " " << hdr.size << endl;
+        }
+        cout << endl;
+
+        // Print line table
+        auto const elf_loader = dwarf::elf::create_loader(ef);
+        dwarf::dwarf dw(elf_loader);
+
+        std::vector<file_table_entry> line_table;
+
+        for(auto cu : dw.compilation_units()) {
+
+            uint32_t const offset = cu.get_section_offset();
+
+            cout << offset << endl;
+
+            add_lines(line_table, cu.get_line_table());
+
+            // print_line_table(cu.get_line_table());
+        }
+
+        std::sort(line_table.begin(), line_table.end(),
+            [](file_table_entry const & left, file_table_entry const & right) {
+                return left.address < right.address;
+            }
+        );
+
+
+
+
+        // read all bl instructions
+        cout << endl;
+        auto const & text = ef.get_section(".text");
+        cout << text.get_name() << endl;
+        cout << text.size() << endl;
+
+        auto const & text_hdr = text.get_hdr();
+
+        cout << endl;
+        cout << text_hdr.addr << endl;
+        cout << text_hdr.addralign << endl;
+        cout << text_hdr.entsize << endl;
+        cout << to_string(text_hdr.flags) << endl;
+        cout << text_hdr.info << endl;
+        cout << text_hdr.link << endl;
+        cout << text_hdr.name << endl;
+        cout << text_hdr.offset << endl;
+        // cout << to_string(text_hdr.order) << endl;
+        cout << text_hdr.size << endl;
+        cout << to_string(text_hdr.type) << endl;
+
+
+        struct branch {
+            uint32_t source_address;
+            string source_line;
+            uint32_t target_address;
+            string target_line;
+        };
+
+        std::vector<branch> branches;
+
+        uint16_t const * data = static_cast<uint16_t const *>(text.data());
+
+        uint32_t pc = text_hdr.addr;
+        for(size_t i = 0; i < text.size() / sizeof(uint16_t); ++i) {
+            uint16_t const inst1 = data[i];
+
+            if(arm_thumb_bl::isValid(inst1) && (i+1) < (text.size() / sizeof(uint16_t))) {
+                uint16_t const inst2 = data[i+1];
+
+                if(arm_thumb_bl::isValid(inst1, inst2))
+                {
+                    uint32_t const target_address = arm_thumb_bl(inst1, inst2, pc).getTargetAddress();
+
+                    branches.push_back({.source_address = pc, .target_address = target_address});
+
+                    pc += sizeof(uint16_t);
+                    ++i;
+                }
+            }
+
+            pc += sizeof(uint16_t);
+        }
+
+        for(auto & elem: branches) {
+            auto  iter = std::lower_bound(line_table.cbegin(), line_table.cend(), 
+                elem.source_address, 
+                [](auto const & left, auto const & right) {
+                    return left.address < right;
+                });
+
+            if(iter != line_table.cend()) {
+                elem.source_line = (--iter)->line;
+            }   
+
+            auto  iter2 = std::lower_bound(line_table.cbegin(), line_table.cend(), 
+                elem.target_address, 
+                [](auto const & left, auto const & right) {
+                    return left.address < right;
+                });
+
+            if(iter2 != line_table.cend()) {
+                elem.target_line = iter2->line;
+            } 
+        }
+
+        
+
+
+        for(auto & elem : branches) {
+            cout << hex << elem.source_address << " " << elem.target_address << endl;;
+            cout << elem.source_line << endl;
+            cout << elem.target_line << endl;
+            cout << endl;
+        }
+
+
 
         return 0;
     }
-    catch(std::exception const & e) {
+    catch (std::exception const &e)
+    {
         cout << e.what() << endl;
         return 1;
     }
 }
-
 
 // #include "elf/elf++.hh"
 // #include "dwarf/dwarf++.hh"

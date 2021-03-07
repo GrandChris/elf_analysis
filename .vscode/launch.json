@@ -8,7 +8,7 @@
             "name": "App",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/elf_analysis",
+            "program": "${workspaceFolder}/build/app/app",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -29,10 +29,10 @@
             "name": "Unit Tests",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/ucppcoro_tests",
+            "program": "${workspaceFolder}/build/test/unit_tests",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -44,7 +44,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "build"
+            "preLaunchTask": "Build Debug"
         }
     ]
 }

@@ -22,3 +22,6 @@ RUN git clone https://github.com/emscripten-core/emsdk.git \
 
 ENV PATH /emsdk:/emsdk/node/14.15.5_64bit/bin:/emsdk/upstream/emscripten:$PATH
 
+# install arm-none-eabi-gcc
+RUN  apt-get -y install --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi
+# RUN  apt-get -y install --no-install-recommends gdb-arm-none-eabi openocd

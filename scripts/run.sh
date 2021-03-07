@@ -1,4 +1,4 @@
-# ./build/elf_analysis ./build/elf_analysis > ./build/elf_analysis_result.txt
-./build/elf_analysis ./build/elf_analysis
+# ./build/app/app ./test/NucleoProject.elf > ./build/res.txt
+./build/app/app ./build/app/app > ./build/res.txt
 
 

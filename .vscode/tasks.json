@@ -89,6 +89,20 @@
             "dependsOn": "Build Debug"
         },
         {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "time",
+            "args": [
+                "./scripts/test.sh"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "dependsOn": "Build Debug"
+        },
+        {
             "label": "Run Emscripten",
             "type": "shell",
             "command": "time",
