@@ -57,6 +57,9 @@
         "unordered_set": "cpp",
         "fstream": "cpp",
         "chrono": "cpp",
-        "ratio": "cpp"
-    }
+        "ratio": "cpp",
+        "cstring": "cpp",
+        "cinttypes": "cpp"
+    },
+    "editor.detectIndentation": false
 }

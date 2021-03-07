@@ -8,10 +8,10 @@
             "name": "App",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/elf_reference_count_run",
+            "program": "${workspaceFolder}/build/elf_analysis",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -23,7 +23,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "build"
+            "preLaunchTask": "Build Debug"
         },
         {
             "name": "Unit Tests",

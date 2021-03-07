@@ -55,16 +55,12 @@
             }
         },
         {
-            "label": "Build Debug Emscirpten",
+            "label": "Build Emscirpten Debug",
             "type": "shell", 
             "command": "source",
             "args": [
                 "./scripts/build_debug_emcc.sh"
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
             "problemMatcher": {
                 "base": "$gcc",
                 "fileLocation": ["relative", "${workspaceRoot}/build"]
@@ -79,9 +75,9 @@
             }
         },
         {
-            "label": "run",
+            "label": "Run",
             "type": "shell",
-            "command": "source",
+            "command": "time",
             "args": [
                 "./scripts/run.sh"
             ],
@@ -90,7 +86,21 @@
                 "kind": "test",
                 "isDefault": true
             },
-            "dependsOn": "build"
+            "dependsOn": "Build Debug"
+        },
+        {
+            "label": "Run Emscripten",
+            "type": "shell",
+            "command": "time",
+            "args": [
+                "./scripts/run_emcc.sh"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "dependsOn": "Build Emscirpten Debug"
         }
     ]
 }
