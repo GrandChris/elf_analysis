@@ -1,19 +1,19 @@
 #ifdef EMSCRIPTEN
-#ifndef NODERAWFS
-    // mount the current folder as a NODEFS instance
-    // inside of emscripten
-    #include <emscripten.h>
+// #ifndef NODERAWFS
+//     // mount the current folder as a NODEFS instance
+//     // inside of emscripten
+//     #include <emscripten.h>
 
-    bool initFileSystem()
-    {
-        EM_ASM(
-            FS.mkdir('/working');
-            FS.mount(NODEFS, {root : './'}, '/working'););
-        return true;
-    }
-    bool isFileSystemInitialized = initFileSystem();
+//     bool initFileSystem()
+//     {
+//         EM_ASM(
+//             FS.mkdir('/working');
+//             FS.mount(NODEFS, {root : './'}, '/working'););
+//         return true;
+//     }
+//     bool isFileSystemInitialized = initFileSystem();
 
-#endif
+// #endif
 #endif
 
 #include "arm_thumb_bl.h"

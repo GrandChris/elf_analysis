@@ -30,14 +30,18 @@ add_compile_options(
     # -ffunction-sections
     # -fdata-sections
     
-    -O0
+    -O3
     -ggdb3
 )
 
 if (EMSCRIPTEN)
-    add_compile_options(
-        -s DISABLE_EXCEPTION_CATCHING=0
-        # -s ALLOW_MEMORY_GROWTH=1
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
+     -s DISABLE_EXCEPTION_CATCHING=0 \
+     -s MODULARIZE \
+     -s EXPORTED_RUNTIME_METHODS='[ccall, cwrap]' \
+     -s EXPORTED_FUNCTIONS=['_sayHi'] \
+     -s FORCE_FILESYSTEM=1"
     )
 else()
     # add_compile_options(
@@ -85,7 +89,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 if (EMSCRIPTEN)
     target_link_options(${PROJECT_NAME} PUBLIC
-        LINKER: -s DISABLE_EXCEPTION_CATCHING=0
+    LINKER: -s DISABLE_EXCEPTION_CATCHING=0
         # LINKER: -s ALLOW_MEMORY_GROWTH=1
     )
 else()
