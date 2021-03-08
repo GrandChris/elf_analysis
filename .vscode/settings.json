@@ -60,7 +60,8 @@
         "ratio": "cpp",
         "cstring": "cpp",
         "cinttypes": "cpp",
-        "codecvt": "cpp"
+        "codecvt": "cpp",
+        "span": "cpp"
     },
     "editor.detectIndentation": false
 }

@@ -17,9 +17,11 @@
 #endif
 
 #include "arm_thumb_bl.h"
+#include "disassembler.h"
 #include "dwarf/dwarf++.hh"
 #include "elf/elf++.hh"
 #include "elf_file_loader.h"
+#include "find_pc.h"
 #include <iostream>
 #include <string_view>
 
@@ -73,7 +75,6 @@ int main(int argc, char **argv)
 
     try
     {
-
         string filename = "";
 
         if (argc != 2)
@@ -94,40 +95,40 @@ int main(int argc, char **argv)
         elf::elf ef(loader);
 
         // Print elf sections
-        auto const &hdr = ef.get_hdr();
+        // auto const &hdr = ef.get_hdr();
 
-        cout << "elf entry: " << hdr.entry << endl;
+        // cout << "elf entry: " << hdr.entry << endl;
 
-        for (auto const &sec : ef.sections())
-        {
-            auto const &hdr = sec.get_hdr();
-            cout << "section " << sec.get_name() << " " << hdr.addr
-                    << " " << hdr.offset << " " << hdr.size << endl;
-        }
-        cout << endl;
+        // for (auto const &sec : ef.sections())
+        // {
+        //     auto const &hdr = sec.get_hdr();
+        //     cout << "section " << sec.get_name() << " " << hdr.addr
+        //             << " " << hdr.offset << " " << hdr.size << endl;
+        // }
+        // cout << endl;
 
-        // Print line table
+        // // Print line table
         auto const elf_loader = dwarf::elf::create_loader(ef);
         dwarf::dwarf dw(elf_loader);
 
-        std::vector<file_table_entry> line_table;
+        // std::vector<file_table_entry> line_table;
 
-        for(auto cu : dw.compilation_units()) {
+        // for(auto cu : dw.compilation_units()) {
 
-            uint32_t const offset = cu.get_section_offset();
+        //     uint32_t const offset = cu.get_section_offset();
 
-            cout << offset << endl;
+        //     cout << offset << endl;
 
-            add_lines(line_table, cu.get_line_table());
+        //     add_lines(line_table, cu.get_line_table());
 
-            // print_line_table(cu.get_line_table());
-        }
+        //     // print_line_table(cu.get_line_table());
+        // }
 
-        std::sort(line_table.begin(), line_table.end(),
-            [](file_table_entry const & left, file_table_entry const & right) {
-                return left.address < right.address;
-            }
-        );
+        // std::sort(line_table.begin(), line_table.end(),
+        //     [](file_table_entry const & left, file_table_entry const & right) {
+        //         return left.address < right.address;
+        //     }
+        // );
 
 
 
@@ -163,49 +164,130 @@ int main(int argc, char **argv)
 
         std::vector<branch> branches;
 
-        uint16_t const * data = static_cast<uint16_t const *>(text.data());
 
-        uint32_t pc = text_hdr.addr;
-        for(size_t i = 0; i < text.size() / sizeof(uint16_t); ++i) {
-            uint16_t const inst1 = data[i];
+        // uint16_t const * data = static_cast<uint16_t const *>(text.data());
 
-            if(arm_thumb_bl::isValid(inst1) && (i+1) < (text.size() / sizeof(uint16_t))) {
-                uint16_t const inst2 = data[i+1];
+        // uint32_t pc = text_hdr.addr;
+        // for(size_t i = 0; i < text.size() / sizeof(uint16_t); ++i) {
+        //     uint16_t const inst1 = data[i];
 
-                if(arm_thumb_bl::isValid(inst1, inst2))
-                {
-                    uint32_t const target_address = arm_thumb_bl(inst1, inst2, pc).getTargetAddress();
+        //     if(arm_thumb_bl::isValid(inst1) && (i+1) < (text.size() / sizeof(uint16_t))) {
+        //         uint16_t const inst2 = data[i+1];
 
-                    branches.push_back({.source_address = pc, .target_address = target_address});
+        //         if(arm_thumb_bl::isValid(inst1, inst2))
+        //         {
+        //             uint32_t const target_address = arm_thumb_bl(inst1, inst2, pc).getTargetAddress();
 
-                    pc += sizeof(uint16_t);
-                    ++i;
+        //             branches.push_back({.source_address = pc, .target_address = target_address});
+
+        //             pc += sizeof(uint16_t);
+        //             ++i;
+        //         }
+        //     }
+
+        //     pc += sizeof(uint16_t);
+        // }
+
+        uint8_t const * data2 = static_cast<uint8_t const *>(text.data());
+        disassembler dis(CS_ARCH_ARM, CS_MODE_THUMB);
+
+        auto const data2_span = std::span(data2, text.size());
+        auto code = dis(data2_span, text.get_hdr().addr);
+
+        for(auto & elem : code) {
+
+            if(elem.id == ARM_INS_BL) {
+                uint32_t const sourceAddress = static_cast<uint32_t>(elem.address);
+                uint32_t targetAddress = 0;
+                if(elem.detail->arm.op_count == 1) {
+                    targetAddress = elem.detail->arm.operands[0].imm;
                 }
+
+                branches.push_back({.source_address = sourceAddress, .target_address = targetAddress});
             }
 
-            pc += sizeof(uint16_t);
+            
+            // cout << hex << elem.address << " ";
+            
+            // for(size_t i = 0; i < elem.size; ++i) {
+            //     cout << hex << static_cast<uint32_t>(elem.bytes[i]);
+            // }
+            
+
+            // cout << " " <<  elem.mnemonic << " " << elem.op_str << " " << dec << elem.id  << endl;
+
+
+            // cs_detail *detail = elem.detail;
+
+            // for(size_t i = 0; i < detail->arm.op_count; ++i) {
+            //     cs_arm_op & op = detail->arm.operands[i];
+            //     switch(op.type) {
+            //     case ARM_OP_INVALID: ///< = CS_OP_INVALID (Uninitialized).
+            //         cout << " invalid";
+            //         break;
+            //     case ARM_OP_REG: ///< = CS_OP_REG (Register operand).
+            //         cout << " reg: " << op.reg;
+            //         break;
+            //     case ARM_OP_IMM: ///< = CS_OP_IMM (Immediate operand).
+            //         cout << " imm: " << op.imm;
+            //         break;
+            //     case ARM_OP_MEM: ///< = CS_OP_MEM (Memory operand).
+            //         cout << " mem: ";
+            //         break;
+            //     case ARM_OP_FP:  ///< = CS_OP_FP (Floating-Point operand).
+            //         cout << " fp: " << op.fp;
+            //         break;
+            //     case ARM_OP_CIMM: ///< C-Immediate (coprocessor registers)
+            //         cout << " cimm: " << op.imm;
+            //         break;
+            //     case ARM_OP_PIMM: ///< P-Immediate (coprocessor registers)
+            //         cout << " pimm: " << op.imm;
+            //         break;
+            //     case ARM_OP_SETEND:	///< operand for SETEND instruction
+            //         cout << " setend: " << op.setend;
+            //         break;
+            //     case ARM_OP_SYSREG:	///< MSR/MRS special register operand
+            //         cout << " sysreg: ";
+            //         break;
+            //     }
+            //     cout << endl;
+
+            // }
+
+            // for (size_t i = 0; i < detail->regs_read_count; i++) {
+            //     cout << detail->regs_read[i] << " ";
+			// }
+            // cout << endl;
+
         }
 
+
+        // for(auto & elem: branches) {
+        //     auto  iter = std::lower_bound(line_table.cbegin(), line_table.cend(), 
+        //         elem.source_address, 
+        //         [](auto const & left, auto const & right) {
+        //             return left.address < right;
+        //         });
+
+        //     if(iter != line_table.cend()) {
+        //         elem.source_line = (--iter)->line;
+        //     }   
+
+        //     auto  iter2 = std::lower_bound(line_table.cbegin(), line_table.cend(), 
+        //         elem.target_address, 
+        //         [](auto const & left, auto const & right) {
+        //             return left.address < right;
+        //         });
+
+        //     if(iter2 != line_table.cend()) {
+        //         elem.target_line = iter2->line;
+        //     } 
+        // }
+
+
         for(auto & elem: branches) {
-            auto  iter = std::lower_bound(line_table.cbegin(), line_table.cend(), 
-                elem.source_address, 
-                [](auto const & left, auto const & right) {
-                    return left.address < right;
-                });
-
-            if(iter != line_table.cend()) {
-                elem.source_line = (--iter)->line;
-            }   
-
-            auto  iter2 = std::lower_bound(line_table.cbegin(), line_table.cend(), 
-                elem.target_address, 
-                [](auto const & left, auto const & right) {
-                    return left.address < right;
-                });
-
-            if(iter2 != line_table.cend()) {
-                elem.target_line = iter2->line;
-            } 
+           elem.source_line = find_address(dw, elem.source_address);
+           elem.target_line = find_address(dw, elem.target_address);
         }
 
         
@@ -218,15 +300,16 @@ int main(int argc, char **argv)
             cout << endl;
         }
 
-
-
-        return 0;
+        cout << "finished" << endl;
     }
     catch (std::exception const &e)
     {
         cout << e.what() << endl;
         return 1;
     }
+
+    cout << "finished more" << endl;
+    return 0;
 }
 
 // #include "elf/elf++.hh"
