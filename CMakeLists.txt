@@ -41,7 +41,8 @@ if (EMSCRIPTEN)
      -s MODULARIZE \
      -s EXPORTED_RUNTIME_METHODS='[ccall, cwrap]' \
      -s EXPORTED_FUNCTIONS=['_sayHi'] \
-     -s FORCE_FILESYSTEM=1"
+     -s FORCE_FILESYSTEM=1 \
+     -s ALLOW_MEMORY_GROWTH=1"
     )
 else()
     # add_compile_options(
