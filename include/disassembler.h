@@ -51,6 +51,7 @@ public:
         }
 
         cs_option(mHandle, CS_OPT_DETAIL, CS_OPT_ON); // turn ON detail feature with CS_OPT_ON
+        cs_option(mHandle, CS_OPT_SKIPDATA, CS_OPT_ON); // skip instructions if it cannot be parsed
     }
 
     

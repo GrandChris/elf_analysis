@@ -104,7 +104,7 @@ endif()
 # compile librarys
 add_subdirectory("libelfin")
 
-option(CAPSTONE_BUILD_STATIC_RUNTIME "Embed static runtime" ON)
+option(CAPSTONE_BUILD_STATIC_RUNTIME "Embed static runtime" OFF)
 option(CAPSTONE_BUILD_STATIC "Build static library" ON)
 option(CAPSTONE_BUILD_SHARED "Build shared library" OFF)
 option(CAPSTONE_BUILD_DIET "Build diet library" OFF)

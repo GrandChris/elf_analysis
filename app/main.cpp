@@ -82,7 +82,8 @@ int main(int argc, char **argv)
             cout << "usage: " << argv[0] << " "
                     << "elf-file" << endl;
             // filename = "./build/app/app";
-            filename = "./test/NucleoProject.elf";
+            // filename = "./test/NucleoProject.elf";
+            filename = "./test/ZEUS_STM32F765NG.elf";
             // return 2;
         }
         else
@@ -95,17 +96,17 @@ int main(int argc, char **argv)
         elf::elf ef(loader);
 
         // Print elf sections
-        // auto const &hdr = ef.get_hdr();
+        auto const &hdr = ef.get_hdr();
 
-        // cout << "elf entry: " << hdr.entry << endl;
+        cout << "elf entry: " << hdr.entry << endl;
 
-        // for (auto const &sec : ef.sections())
-        // {
-        //     auto const &hdr = sec.get_hdr();
-        //     cout << "section " << sec.get_name() << " " << hdr.addr
-        //             << " " << hdr.offset << " " << hdr.size << endl;
-        // }
-        // cout << endl;
+        for (auto const &sec : ef.sections())
+        {
+            auto const &hdr = sec.get_hdr();
+            cout << "section " << sec.get_name() << " " << hdr.addr
+                    << " " << hdr.offset << " " << hdr.size << endl;
+        }
+        cout << endl;
 
         // // Print line table
         auto const elf_loader = dwarf::elf::create_loader(ef);
@@ -193,6 +194,7 @@ int main(int argc, char **argv)
 
         auto const data2_span = std::span(data2, text.size());
         auto code = dis(data2_span, text.get_hdr().addr);
+        cout << "instruction count: " << code.size() << endl;
 
         for(auto & elem : code) {
 
@@ -207,57 +209,59 @@ int main(int argc, char **argv)
             }
 
             
-            // cout << hex << elem.address << " ";
+            cout << hex << elem.address << " ";
             
-            // for(size_t i = 0; i < elem.size; ++i) {
-            //     cout << hex << static_cast<uint32_t>(elem.bytes[i]);
-            // }
+            for(size_t i = 0; i < elem.size; ++i) {
+                cout << hex << static_cast<uint32_t>(elem.bytes[i]);
+            }
             
 
-            // cout << " " <<  elem.mnemonic << " " << elem.op_str << " " << dec << elem.id  << endl;
+            cout << " " <<  elem.mnemonic << " " << elem.op_str << " " << dec << elem.id  << endl;
 
+            if(elem.id != 0) {
+cs_detail *detail = elem.detail;
 
-            // cs_detail *detail = elem.detail;
+            for(size_t i = 0; i < detail->arm.op_count; ++i) {
+                cs_arm_op & op = detail->arm.operands[i];
+                switch(op.type) {
+                case ARM_OP_INVALID: ///< = CS_OP_INVALID (Uninitialized).
+                    cout << " invalid";
+                    break;
+                case ARM_OP_REG: ///< = CS_OP_REG (Register operand).
+                    cout << " reg: " << op.reg;
+                    break;
+                case ARM_OP_IMM: ///< = CS_OP_IMM (Immediate operand).
+                    cout << " imm: " << op.imm;
+                    break;
+                case ARM_OP_MEM: ///< = CS_OP_MEM (Memory operand).
+                    cout << " mem: ";
+                    break;
+                case ARM_OP_FP:  ///< = CS_OP_FP (Floating-Point operand).
+                    cout << " fp: " << op.fp;
+                    break;
+                case ARM_OP_CIMM: ///< C-Immediate (coprocessor registers)
+                    cout << " cimm: " << op.imm;
+                    break;
+                case ARM_OP_PIMM: ///< P-Immediate (coprocessor registers)
+                    cout << " pimm: " << op.imm;
+                    break;
+                case ARM_OP_SETEND:	///< operand for SETEND instruction
+                    cout << " setend: " << op.setend;
+                    break;
+                case ARM_OP_SYSREG:	///< MSR/MRS special register operand
+                    cout << " sysreg: ";
+                    break;
+                }
+                cout << endl;
 
-            // for(size_t i = 0; i < detail->arm.op_count; ++i) {
-            //     cs_arm_op & op = detail->arm.operands[i];
-            //     switch(op.type) {
-            //     case ARM_OP_INVALID: ///< = CS_OP_INVALID (Uninitialized).
-            //         cout << " invalid";
-            //         break;
-            //     case ARM_OP_REG: ///< = CS_OP_REG (Register operand).
-            //         cout << " reg: " << op.reg;
-            //         break;
-            //     case ARM_OP_IMM: ///< = CS_OP_IMM (Immediate operand).
-            //         cout << " imm: " << op.imm;
-            //         break;
-            //     case ARM_OP_MEM: ///< = CS_OP_MEM (Memory operand).
-            //         cout << " mem: ";
-            //         break;
-            //     case ARM_OP_FP:  ///< = CS_OP_FP (Floating-Point operand).
-            //         cout << " fp: " << op.fp;
-            //         break;
-            //     case ARM_OP_CIMM: ///< C-Immediate (coprocessor registers)
-            //         cout << " cimm: " << op.imm;
-            //         break;
-            //     case ARM_OP_PIMM: ///< P-Immediate (coprocessor registers)
-            //         cout << " pimm: " << op.imm;
-            //         break;
-            //     case ARM_OP_SETEND:	///< operand for SETEND instruction
-            //         cout << " setend: " << op.setend;
-            //         break;
-            //     case ARM_OP_SYSREG:	///< MSR/MRS special register operand
-            //         cout << " sysreg: ";
-            //         break;
-            //     }
-            //     cout << endl;
-
-            // }
+            }
 
             // for (size_t i = 0; i < detail->regs_read_count; i++) {
             //     cout << detail->regs_read[i] << " ";
 			// }
             // cout << endl;
+            }
+            
 
         }
 
