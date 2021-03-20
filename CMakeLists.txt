@@ -40,12 +40,12 @@ if (EMSCRIPTEN)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
      -s DISABLE_EXCEPTION_CATCHING=0 \
-     -s MODULARIZE \
-     -s EXPORTED_RUNTIME_METHODS='[ccall, cwrap]' \
-     -s EXPORTED_FUNCTIONS=['_sayHi'] \
      -s FORCE_FILESYSTEM=1 \
      -s ALLOW_MEMORY_GROWTH=1"
-    )
+     )
+    #  -s MODULARIZE \
+     #  -s EXPORTED_FUNCTIONS=['_sayHi'] \
+    #  -s EXPORTED_RUNTIME_METHODS='[ccall, cwrap]' \
 else()
     add_compile_options(
         -fsanitize=address 
@@ -60,33 +60,34 @@ add_library(${PROJECT_NAME})
 target_compile_options(${PROJECT_NAME} PUBLIC 
     -ggdb3
 )
-
-# Set compile options
-# set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
-
-# target_compile_options(${PROJECT_NAME} PRIVATE
-
-# )
-
+    
+    # Set compile options
+    # set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
+    
+    # target_compile_options(${PROJECT_NAME} PRIVATE
+    
+    # )
+    
 # Include Directories
 target_include_directories(${PROJECT_NAME} PUBLIC 
     "./include"
-    "./capstone/include"
+    # "./capstone/include"
+    "${CMAKE_BINARY_DIR}/_deps/capstone-src/include"
+
 )
     
-# Add source files
- file(GLOB SOURCE_FILES CONFIGURE_DEPENDS
+    # Add source files
+file(GLOB SOURCE_FILES CONFIGURE_DEPENDS
     "./source/*.cpp"
     "./source/*/*.cpp"
     "./source/*/*/*.cpp"
-    )
-    
+)
+
 target_sources(${PROJECT_NAME} PUBLIC ${SOURCE_FILES})
-    
- # Link libraries
+
+# Link libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC 
-    elf
-    dwarf
+    elfio
     capstone-static
     $<$<CXX_COMPILER_ID:Clang>:nodefs.js>
 )
@@ -98,7 +99,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 if (EMSCRIPTEN)
     target_link_options(${PROJECT_NAME} PUBLIC
-    LINKER: -s DISABLE_EXCEPTION_CATCHING=0
+        LINKER: -s DISABLE_EXCEPTION_CATCHING=0
         # LINKER: -s ALLOW_MEMORY_GROWTH=1
     )
 else()
@@ -110,8 +111,23 @@ else()
 endif()
 
 # compile librarys
-add_subdirectory("libelfin")
+include(FetchContent)
 
+# elfio
+FetchContent_Declare(
+    ELFIO
+    GIT_REPOSITORY https://github.com/serge1/ELFIO.git
+    GIT_TAG        Release_3.8
+)
+FetchContent_MakeAvailable(ELFIO)
+        
+FetchContent_Declare(
+    CAPSTONE
+    GIT_REPOSITORY https://github.com/aquynh/capstone.git
+    GIT_TAG        4.0.2
+)
+
+#capstone
 option(CAPSTONE_BUILD_STATIC_RUNTIME "Embed static runtime" OFF)
 option(CAPSTONE_BUILD_STATIC "Build static library" ON)
 option(CAPSTONE_BUILD_SHARED "Build shared library" OFF)
@@ -120,12 +136,13 @@ option(CAPSTONE_BUILD_TESTS "Build tests" OFF)
 option(CAPSTONE_BUILD_CSTOOL "Build cstool" OFF)
 option(CAPSTONE_USE_DEFAULT_ALLOC "Use default memory allocation functions" ON)
 option(CAPSTONE_ARCHITECTURE_DEFAULT "Whether architectures are enabled by default" ON)
-add_subdirectory("capstone")
 
-# # compile app
+FetchContent_MakeAvailable(CAPSTONE)
+
+# compile app
 add_subdirectory("app")
 
-# # compile tests
+# compile tests
 if(ENABLE_TESTS)
     add_subdirectory("test")
 endif()

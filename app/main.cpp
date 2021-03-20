@@ -16,13 +16,14 @@
 // #endif
 #endif
 
-#include "arm_thumb_bl.h"
 #include "disassembler.h"
-#include "dwarf/dwarf++.hh"
-#include "elf/elf++.hh"
-#include "elf_file_loader.h"
-#include "find_pc.h"
-// #include "line_table.h"
+
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wall"
+// #pragma GCC diagnostic ignored "-Wextra"
+#include "elfio/elfio.hpp"  
+// #pragma GCC diagnostic pop
+
 #include "dwarf/debug_line/header.h"
 #include "dwarf/debug_line/state_machine.h"
 #include <iostream>
@@ -30,52 +31,17 @@
 
 using namespace std;
 
-void print_line_table(const dwarf::line_table &lt)
-    {
-        for (auto const &line : lt)
-        {
-            if (line.end_sequence)
-            {
-                cout << endl;
-            }
-            else
-            {
-                cout << line.file->path << " " << line.line << " " << line.address << endl;
-            }
-        }
-}
 
 struct file_table_entry {
     uint32_t address;
     string line;
 };
 
-void add_lines(std::vector<file_table_entry> & table, const dwarf::line_table &lt) {
-
-    for(auto const & line : lt)
-    {
-        if(line.end_sequence) {
-            //cout << endl;
-        }
-        else {
-            uint32_t address = line.address;
-            string line_str = line.file->path + ":" + to_string(line.line) + ":" + to_string(line.column);
-            table.push_back({address, line_str});
-        }
-    }
 
 
-}
-
-
-void main_print() {
-    cout << "Hello World!" << endl;
-}
 
 int main(int argc, char **argv)
 {
-    main_print();
-
     try
     {
         string filename = "";
@@ -94,23 +60,69 @@ int main(int argc, char **argv)
             filename = argv[1];
         }
 
-        // Load file
-        auto const loader = std::make_shared<elf_file_loader>(filename);
-        elf::elf ef(loader);
-
-        // Print elf sections
-        auto const &hdr = ef.get_hdr();
-
-        cout << "elf entry: " << hdr.entry << endl;
-        cout << "machine: " << hdr.machine << endl;
-
-        for (auto const &sec : ef.sections())
-        {
-            auto const &hdr = sec.get_hdr();
-            cout << "section " << sec.get_name() << " " << hex << hdr.addr
-                    << " " << dec <<  hdr.offset << " " << hdr.size << endl;
+        // Create elfio reader
+        ELFIO::elfio reader; 
+        if ( !reader.load( filename ) ) {      
+             std::cout << "Can't find or process ELF file " << filename << std::endl;
+             return 2;
         }
-        cout << endl;
+
+        // Print ELF file properties
+        std::cout << "ELF file class    : ";
+        if ( reader.get_class() == ELFCLASS32 )std::cout << "ELF32" << std::endl;
+        else {
+            std::cout << "ELF64" << std::endl;
+        }
+        std::cout << "ELF file encoding : ";
+        if ( reader.get_encoding() == ELFDATA2LSB ) {
+            std::cout << "Little endian" << std::endl;
+        }
+        else {
+            std::cout << "Big endian" << std::endl;
+        }
+
+        std::cout << "Machine: " << reader.get_machine() << std::endl;
+
+        std::span<uint8_t const> debug_line;
+        std::span<uint8_t const> text;
+        uint64_t text_address = 0;
+
+        // Print ELF file sections info
+        ELFIO::Elf_Half sec_num = reader.sections.size();
+        std::cout << "Number of sections: " << sec_num << std::endl;
+        for ( int i = 0; i < sec_num; ++i ) {
+            const ELFIO::section* psec = reader.sections[i];
+            std::cout << "  [" << i << "] "<< psec->get_name()<< "\t"<< psec->get_size() << " address: " << hex << psec->get_address() << dec << std::endl;
+            // Access section's data
+            // const char* p = reader.sections[i]->get_data();
+
+            if(psec->get_name() == ".debug_line") {
+                debug_line =  std::span<uint8_t const>(reinterpret_cast<uint8_t const *>(reader.sections[i]->get_data()), static_cast<size_t>(psec->get_size()));
+            }
+            else if(psec->get_name() == ".text") {
+                text =  std::span<uint8_t const>(reinterpret_cast<uint8_t const *>(reader.sections[i]->get_data()), static_cast<size_t>(psec->get_size()));
+                text_address = psec->get_address();
+            }
+        }
+
+
+        // // Load file
+        // auto const loader = std::make_shared<elf_file_loader>(filename);
+        // elf::elf ef(loader);
+
+        // // Print elf sections
+        // auto const &hdr = ef.get_hdr();
+
+        // cout << "elf entry: " << hdr.entry << endl;
+        // cout << "machine: " << hdr.machine << endl;
+
+        // for (auto const &sec : ef.sections())
+        // {
+        //     auto const &hdr = sec.get_hdr();
+        //     cout << "section " << sec.get_name() << " " << hex << hdr.addr
+        //             << " " << dec <<  hdr.offset << " " << hdr.size << endl;
+        // }
+        // cout << endl;
 
         // // Print line table
         // auto const elf_loader = dwarf::elf::create_loader(ef);
@@ -135,20 +147,20 @@ int main(int argc, char **argv)
         //     }
         // );
 
-        cout << endl;
-        auto const & comment = ef.get_section(".comment");
-        char const * comment_text = static_cast<char const *>(comment.data());
-        cout << comment_text << endl;
-        cout << endl;
+        // cout << endl;
+        // auto const & comment = ef.get_section(".comment");
+        // char const * comment_text = static_cast<char const *>(comment.data());
+        // cout << comment_text << endl;
+        // cout << endl;
 
-        auto const & debug_line = ef.get_section(".debug_line");
-        size_t const debug_line_size = debug_line.size();
-        uint8_t const * debug_line_data = static_cast<uint8_t const *>(debug_line.data());
-        // cout << debug_line_data << endl;
+        // auto const & debug_line = ef.get_section(".debug_line");
+        // size_t const debug_line_size = debug_line.size();
+        // uint8_t const * debug_line_data = static_cast<uint8_t const *>(debug_line.data());
+        // // cout << debug_line_data << endl;
 
         // auto const lineNumberProgramHeader = ReadLineNumberProgramHeader(debug_line_data);
         // create_line_table(debug_line_data);
-        auto const debug_line_headers = dwarf::debug_line::Header::read(std::span(debug_line_data, debug_line_size));
+        auto const debug_line_headers = dwarf::debug_line::Header::read(debug_line);
         // size_t const debug_line_headers_size = debug_line_headers.size();
 
 
@@ -175,25 +187,25 @@ int main(int argc, char **argv)
 
 
         // read all bl instructions
-        cout << endl;
-        auto const & text = ef.get_section(".text");
-        cout << text.get_name() << endl;
-        cout << text.size() << endl;
+        // cout << endl;
+        // auto const & text2 = ef.get_section(".text");
+        // cout << text.get_name() << endl;
+        // cout << text.size() << endl;
 
-        auto const & text_hdr = text.get_hdr();
+        // auto const & text_hdr = text2.get_hdr();
 
-        cout << endl;
-        cout << text_hdr.addr << endl;
-        cout << text_hdr.addralign << endl;
-        cout << text_hdr.entsize << endl;
-        cout << to_string(text_hdr.flags) << endl;
-        cout << text_hdr.info << endl;
-        cout << text_hdr.link << endl;
-        cout << text_hdr.name << endl;
-        cout << text_hdr.offset << endl;
-        // cout << to_string(text_hdr.order) << endl;
-        cout << text_hdr.size << endl;
-        cout << to_string(text_hdr.type) << endl;
+        // cout << endl;
+        // cout << text_hdr.addr << endl;
+        // cout << text_hdr.addralign << endl;
+        // cout << text_hdr.entsize << endl;
+        // cout << to_string(text_hdr.flags) << endl;
+        // cout << text_hdr.info << endl;
+        // cout << text_hdr.link << endl;
+        // cout << text_hdr.name << endl;
+        // cout << text_hdr.offset << endl;
+        // // cout << to_string(text_hdr.order) << endl;
+        // cout << text_hdr.size << endl;
+        // cout << to_string(text_hdr.type) << endl;
 
         
 
@@ -231,24 +243,39 @@ int main(int argc, char **argv)
         //     pc += sizeof(uint16_t);
         // }
 
-        uint8_t const * data2 = static_cast<uint8_t const *>(text.data());
-        disassembler dis(CS_ARCH_ARM, CS_MODE_THUMB);
+        // uint8_t const * data2 = static_cast<uint8_t const *>(text.data());
+        ;
+        if(reader.get_machine() == EM_ARM) {
+            disassembler dis (CS_ARCH_ARM, CS_MODE_THUMB);
 
-        auto const data2_span = std::span(data2, text.size());
-        auto code = dis(data2_span, text.get_hdr().addr);
-        cout << "instruction count: " << code.size() << endl;
+            auto code = dis(text, text_address);
+            cout << "instruction count: " << code.size() << endl;
 
-        for(auto & elem : code) {
+            for(auto & elem : code) {
 
-            if(elem.id == ARM_INS_BL) {
-                uint32_t const sourceAddress = static_cast<uint32_t>(elem.address);
-                uint32_t targetAddress = 0;
-                if(elem.detail->arm.op_count == 1) {
-                    targetAddress = elem.detail->arm.operands[0].imm;
+                if(elem.id == ARM_INS_BL) {
+                    uint32_t const sourceAddress = static_cast<uint32_t>(elem.address);
+                    uint32_t targetAddress = 0;
+                    if(elem.detail->arm.op_count == 1) {
+                        targetAddress = elem.detail->arm.operands[0].imm;
+                    }
+
+                    branches.push_back({.source_address = sourceAddress, .target_address = targetAddress});
                 }
-
-                branches.push_back({.source_address = sourceAddress, .target_address = targetAddress});
             }
+        }
+        else if(reader.get_machine() == EM_386) {
+            disassembler dis (CS_ARCH_X86, CS_MODE_64);
+
+
+        }
+        else {
+            cout << "Machine not found" << endl;
+        }
+
+        
+
+       
 
             
 //             cout << hex << elem.address << " ";
@@ -305,7 +332,7 @@ int main(int argc, char **argv)
             // }
             
 
-        }
+        
 
         cout << branches.size() << endl;
 

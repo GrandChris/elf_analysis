@@ -8,6 +8,7 @@
 #include "dwarf/debug_line/state_machine.h"
 #include "dwarf/leb128.h"
 #include <cassert>
+#include <cstring>
 
 using namespace dwarf::debug_line;
 
@@ -48,24 +49,24 @@ void StateMachine::process(std::span<uint8_t const> data)
         };
 
         auto uint16_operand = [&]() {
-            size_t n = 2;
-            uint16_t const * op1 = reinterpret_cast<uint16_t const *>(&data[i+1]);
-            i += n;
-            return *op1;
+            uint16_t op1 = 0;
+            memcpy(&op1, &data[i+1], sizeof(uint16_t));
+            i += sizeof(uint16_t);
+            return op1;
         };
 
         auto uint32_operand = [&]() {
-            size_t n = 4;
-            uint32_t const * op1 = reinterpret_cast<uint32_t const *>(&data[i+1]);
-            i += n;
-            return *op1;
+            uint32_t op1 = 0;
+            memcpy(&op1, &data[i+1], sizeof(uint32_t));
+            i += sizeof(uint32_t);
+            return op1;
         };
 
         auto uint64_operand = [&]() {
-            size_t n = 8;
-            uint64_t const * op1 = reinterpret_cast<uint64_t const *>(&data[i+1]);
-            i += n;
-            return *op1;
+            uint64_t op1 = 0;
+            memcpy(&op1, &data[i+1], sizeof(uint64_t));
+            i += sizeof(uint64_t);
+            return op1;
         };
 
         auto const opcode = data[i];

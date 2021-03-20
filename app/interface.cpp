@@ -42,11 +42,8 @@ int daysInWeek() {
 
 
 #include "disassembler.h"
-#include "dwarf/dwarf++.hh"
-#include "elf/elf++.hh"
-#include "elf_file_loader.h"
-#include "find_pc.h"
 #include <iostream>
+#include <vector>
 
 #ifdef EMSCRIPTEN
 #ifndef NODERAWFS
@@ -78,56 +75,56 @@ std::vector<branch> branches;
 
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE
-int create_address_table(char const * filename) {
-    try
-    {
-        std::cout << "filename: " << filename << std::endl;
+// EMSCRIPTEN_KEEPALIVE
+// int create_address_table(char const * filename) {
+//     try
+//     {
+//         std::cout << "filename: " << filename << std::endl;
 
-        branches.clear();
+//         branches.clear();
 
-        // read elf file
-        auto const loader = std::make_shared<elf_file_loader>(filename);
-        elf::elf ef(loader);
-        auto const elf_loader = dwarf::elf::create_loader(ef);
-        dwarf::dwarf dw(elf_loader);
+//         // read elf file
+//         auto const loader = std::make_shared<elf_file_loader>(filename);
+//         elf::elf ef(loader);
+//         auto const elf_loader = dwarf::elf::create_loader(ef);
+//         dwarf::dwarf dw(elf_loader);
 
-        // parse .text section
-        auto const & text = ef.get_section(".text");
-        uint8_t const * data2 = static_cast<uint8_t const *>(text.data());
-        disassembler dis(CS_ARCH_ARM, CS_MODE_THUMB);
+//         // parse .text section
+//         auto const & text = ef.get_section(".text");
+//         uint8_t const * data2 = static_cast<uint8_t const *>(text.data());
+//         disassembler dis(CS_ARCH_ARM, CS_MODE_THUMB);
 
-        auto const data2_span = std::span(data2, text.size());
-        auto code = dis(data2_span, text.get_hdr().addr);
+//         auto const data2_span = std::span(data2, text.size());
+//         auto code = dis(data2_span, text.get_hdr().addr);
 
-        for(auto & elem : code) {
+//         for(auto & elem : code) {
 
-            if(elem.id == ARM_INS_BL) {
-                uint32_t const sourceAddress = static_cast<uint32_t>(elem.address);
-                uint32_t targetAddress = 0;
-                if(elem.detail->arm.op_count == 1) {
-                    targetAddress = elem.detail->arm.operands[0].imm;
-                }
+//             if(elem.id == ARM_INS_BL) {
+//                 uint32_t const sourceAddress = static_cast<uint32_t>(elem.address);
+//                 uint32_t targetAddress = 0;
+//                 if(elem.detail->arm.op_count == 1) {
+//                     targetAddress = elem.detail->arm.operands[0].imm;
+//                 }
 
-                branches.push_back({.source_address = sourceAddress, .target_address = targetAddress});
-            }
-        }
+//                 branches.push_back({.source_address = sourceAddress, .target_address = targetAddress});
+//             }
+//         }
 
-        // map addresses to lines
-        for(auto & elem: branches) {
-            elem.source_line = find_address(dw, elem.source_address);
-            elem.target_line = find_address(dw, elem.target_address);
-        }
-    }
-    catch (std::exception const &e)
-    {
-        std::cout << e.what() <<  std::endl;
-        return 1;
-    }
+//         // map addresses to lines
+//         for(auto & elem: branches) {
+//             elem.source_line = find_address(dw, elem.source_address);
+//             elem.target_line = find_address(dw, elem.target_address);
+//         }
+//     }
+//     catch (std::exception const &e)
+//     {
+//         std::cout << e.what() <<  std::endl;
+//         return 1;
+//     }
 
-     std::cout << "finished" <<  std::endl;
-    return 0;
-}
+//      std::cout << "finished" <<  std::endl;
+//     return 0;
+// }
 
 EMSCRIPTEN_KEEPALIVE
 unsigned int table_size() {
