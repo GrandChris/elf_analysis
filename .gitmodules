@@ -1,6 +1,3 @@
 [submodule "libelfin"]
 	path = libelfin
 	url = https://github.com/GrandChris/libelfin.git
-[submodule "capstone"]
-	path = capstone
-	url = https://github.com/aquynh/capstone.git
