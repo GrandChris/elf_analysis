@@ -29,10 +29,12 @@ add_compile_options(
     
     # -ffunction-sections
     # -fdata-sections
-    
     -O3
-    -ggdb3
+    # -gdwarf-3
+    # -ggdb3
 )
+
+
 
 if (EMSCRIPTEN)
 
@@ -45,15 +47,19 @@ if (EMSCRIPTEN)
      -s ALLOW_MEMORY_GROWTH=1"
     )
 else()
-    # add_compile_options(
-    #     -fsanitize=address 
-    #     -fsanitize=undefined
-    #     -fsanitize=leak
-    # )
+    add_compile_options(
+        -fsanitize=address 
+        -fsanitize=undefined
+        -fsanitize=leak
+    )
 endif()
 
 # Add library
 add_library(${PROJECT_NAME})
+
+target_compile_options(${PROJECT_NAME} PUBLIC 
+    -ggdb3
+)
 
 # Set compile options
 # set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
@@ -71,6 +77,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 # Add source files
  file(GLOB SOURCE_FILES CONFIGURE_DEPENDS
     "./source/*.cpp"
+    "./source/*/*.cpp"
+    "./source/*/*/*.cpp"
     )
     
 target_sources(${PROJECT_NAME} PUBLIC ${SOURCE_FILES})
@@ -94,11 +102,11 @@ if (EMSCRIPTEN)
         # LINKER: -s ALLOW_MEMORY_GROWTH=1
     )
 else()
-    # target_link_libraries(${PROJECT_NAME} PUBLIC 
-    #     ${LIBASAN}
-    #     ${LIBLSAN}
-    #     ${LIBUBSAN}
-    # )
+    target_link_libraries(${PROJECT_NAME} PUBLIC 
+        ${LIBASAN}
+        ${LIBLSAN}
+        ${LIBUBSAN}
+    )
 endif()
 
 # compile librarys
