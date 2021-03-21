@@ -71,7 +71,7 @@ void StateMachine::process(std::span<uint8_t const> data)
 
         auto const opcode = data[i];
 
-        std::vector<uint8_t> opcodes(&data[i], &data[i+25]);
+        // std::vector<uint8_t> opcodes(&data[i], &data[i+25]);
 
 
         switch(opcode) {

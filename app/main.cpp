@@ -21,52 +21,63 @@
 // #pragma GCC diagnostic push
 // #pragma GCC diagnostic ignored "-Wall"
 // #pragma GCC diagnostic ignored "-Wextra"
-#include "elfio/elfio.hpp"  
+#include "elfio/elfio.hpp"
 // #pragma GCC diagnostic pop
 
 #include "dwarf/debug_line/header.h"
 #include "dwarf/debug_line/state_machine.h"
+#include <iomanip>
 #include <iostream>
 #include <string_view>
+#include <unordered_map>
+#include <algorithm>
 
 using namespace std;
 
 
-struct file_table_entry {
-    uint32_t address;
-    string line;
+// struct file_table_entry {
+//     uint32_t address;
+//     string line;
+// };
+
+struct Line {
+    std::string filename;
+    std::string path;
+    uint32_t line;
+    uint32_t column;
+    bool isEndSequence;
+};
+
+struct DisassembledLine {
+    uint64_t address;
+    string opcode_description;
+    uint64_t branch_destination;
+    Line branch_destination_line;
+    Line line;
+};
+
+struct DisassembledFile {
+    string filename;
+    std::vector<DisassembledLine> lines;
 };
 
 
 
-
-int main(int argc, char **argv)
+DisassembledFile disassembleFile(string const & filename, bool print_debug_info = true) 
 {
-    try
-    {
-        string filename = "";
+    cout << "### reading file ###" << endl;
 
-        if (argc != 2)
-        {
-            cout << "usage: " << argv[0] << " "
-                    << "elf-file" << endl;
-            // filename = "./build/app/app";
-            // filename = "./test/NucleoProject.elf";
-            filename = "./test/ZEUS_STM32F765NG.elf";
-            // return 2;
-        }
-        else
-        {
-            filename = argv[1];
-        }
+    DisassembledFile res = {};
+    res.filename = filename;
 
-        // Create elfio reader
-        ELFIO::elfio reader; 
-        if ( !reader.load( filename ) ) {      
-             std::cout << "Can't find or process ELF file " << filename << std::endl;
-             return 2;
-        }
+    // Create elfio reader
+    ELFIO::elfio reader; 
+    if ( !reader.load( filename ) ) {      
+            std::cout << "Can't find or process ELF file " << filename << std::endl;
+            return {};
+    }
 
+    if(print_debug_info) {
         // Print ELF file properties
         std::cout << "ELF file class    : ";
         if ( reader.get_class() == ELFCLASS32 )std::cout << "ELF32" << std::endl;
@@ -80,300 +91,637 @@ int main(int argc, char **argv)
         else {
             std::cout << "Big endian" << std::endl;
         }
-
         std::cout << "Machine: " << reader.get_machine() << std::endl;
+    }
 
-        std::span<uint8_t const> debug_line;
-        std::span<uint8_t const> text;
-        uint64_t text_address = 0;
+    // read sections
+    std::span<uint8_t const> debug_line;
+    std::span<uint8_t const> text;
+    uint64_t text_address = 0;
 
-        // Print ELF file sections info
-        ELFIO::Elf_Half sec_num = reader.sections.size();
+    // Print ELF file sections info
+    ELFIO::Elf_Half sec_num = reader.sections.size();
+    if(print_debug_info) {
         std::cout << "Number of sections: " << sec_num << std::endl;
-        for ( int i = 0; i < sec_num; ++i ) {
-            const ELFIO::section* psec = reader.sections[i];
+    }
+    
+    for ( int i = 0; i < sec_num; ++i ) {
+        const ELFIO::section* psec = reader.sections[i];
+
+        if(print_debug_info) {
             std::cout << "  [" << i << "] "<< psec->get_name()<< "\t"<< psec->get_size() << " address: " << hex << psec->get_address() << dec << std::endl;
-            // Access section's data
-            // const char* p = reader.sections[i]->get_data();
-
-            if(psec->get_name() == ".debug_line") {
-                debug_line =  std::span<uint8_t const>(reinterpret_cast<uint8_t const *>(reader.sections[i]->get_data()), static_cast<size_t>(psec->get_size()));
-            }
-            else if(psec->get_name() == ".text") {
-                text =  std::span<uint8_t const>(reinterpret_cast<uint8_t const *>(reader.sections[i]->get_data()), static_cast<size_t>(psec->get_size()));
-                text_address = psec->get_address();
-            }
         }
 
+        if(psec->get_name() == ".debug_line") {
+            debug_line =  std::span<uint8_t const>(reinterpret_cast<uint8_t const *>(reader.sections[i]->get_data()), static_cast<size_t>(psec->get_size()));
+        }
+        else if(psec->get_name() == ".text") {
+            text =  std::span<uint8_t const>(reinterpret_cast<uint8_t const *>(reader.sections[i]->get_data()), static_cast<size_t>(psec->get_size()));
+            text_address = psec->get_address();
+        }
+    }
 
-        // // Load file
-        // auto const loader = std::make_shared<elf_file_loader>(filename);
-        // elf::elf ef(loader);
+    // read debug_line headers
+    auto const debug_line_headers = dwarf::debug_line::Header::read(debug_line);
 
-        // // Print elf sections
-        // auto const &hdr = ef.get_hdr();
+    cout << "### decode debug_line section ###" << endl;
+    // decode debug_line
+    unordered_map<uint64_t, Line> line_map;
+    std::vector<uint64_t> end_sequence_map;
 
-        // cout << "elf entry: " << hdr.entry << endl;
-        // cout << "machine: " << hdr.machine << endl;
+    for(auto const & header : debug_line_headers) 
+    {
+        auto const lineTable = dwarf::debug_line::decode_data(header);
+        // cout << "line table size: " << lineTable.size() << endl;;
 
-        // for (auto const &sec : ef.sections())
-        // {
-        //     auto const &hdr = sec.get_hdr();
-        //     cout << "section " << sec.get_name() << " " << hex << hdr.addr
-        //             << " " << dec <<  hdr.offset << " " << hdr.size << endl;
-        // }
-        // cout << endl;
+        for(auto const & elem : lineTable) {
+            if(!elem.end_sequence) {
+                auto const address = elem.address;
+                auto const & fileName = header.file_names[elem.file - 1];
+                Line lineMapData = {
+                    .filename = std::string(fileName.name),
+                    .path = std::string(header.include_directories[fileName.include_directories_index - 1]),
+                    .line = elem.line,
+                    .column = elem.column
+                };
 
-        // // Print line table
-        // auto const elf_loader = dwarf::elf::create_loader(ef);
-        // dwarf::dwarf dw(elf_loader);
-
-        // std::vector<file_table_entry> line_table;
-
-        // for(auto cu : dw.compilation_units()) {
-
-        //     uint32_t const offset = cu.get_section_offset();
-
-        //     cout << offset << endl;
-
-        //     add_lines(line_table, cu.get_line_table());
-
-        //     // print_line_table(cu.get_line_table());
-        // }
-
-        // std::sort(line_table.begin(), line_table.end(),
-        //     [](file_table_entry const & left, file_table_entry const & right) {
-        //         return left.address < right.address;
-        //     }
-        // );
-
-        // cout << endl;
-        // auto const & comment = ef.get_section(".comment");
-        // char const * comment_text = static_cast<char const *>(comment.data());
-        // cout << comment_text << endl;
-        // cout << endl;
-
-        // auto const & debug_line = ef.get_section(".debug_line");
-        // size_t const debug_line_size = debug_line.size();
-        // uint8_t const * debug_line_data = static_cast<uint8_t const *>(debug_line.data());
-        // // cout << debug_line_data << endl;
-
-        // auto const lineNumberProgramHeader = ReadLineNumberProgramHeader(debug_line_data);
-        // create_line_table(debug_line_data);
-        auto const debug_line_headers = dwarf::debug_line::Header::read(debug_line);
-        // size_t const debug_line_headers_size = debug_line_headers.size();
-
-
-        for(auto const & header : debug_line_headers) {
-            // header.print(cout);
-
-            auto const lineTable = dwarf::debug_line::decode_data(header);
-            cout << "line table size: " << lineTable.size() << endl;;
-
-            // for(size_t i = 0; i < lineTable.size(); ++i) {
-            //     auto const & file_name = header.file_names[lineTable[i].file - 1];
-
-            //     cout << i << " " << hex << lineTable[i].address << dec << " " 
-            //         <<  file_name.name << ":" << lineTable[i].line << ":" << lineTable[i].column;
-            //     if(lineTable[i].end_sequence) {
-            //         cout << " END" << endl;
-            //     }
-            //     cout << endl;
-            // }
+                line_map.insert({address, lineMapData}); 
+            }   
+            else {
+                end_sequence_map.push_back(elem.address);
+            }    
         }
 
+        // debug plot
+        // for(size_t i = 0; i < lineTable.size(); ++i) {
+        //     auto const & file_name = header.file_names[lineTable[i].file - 1];
 
-        
-
-
-        // read all bl instructions
-        // cout << endl;
-        // auto const & text2 = ef.get_section(".text");
-        // cout << text.get_name() << endl;
-        // cout << text.size() << endl;
-
-        // auto const & text_hdr = text2.get_hdr();
-
-        // cout << endl;
-        // cout << text_hdr.addr << endl;
-        // cout << text_hdr.addralign << endl;
-        // cout << text_hdr.entsize << endl;
-        // cout << to_string(text_hdr.flags) << endl;
-        // cout << text_hdr.info << endl;
-        // cout << text_hdr.link << endl;
-        // cout << text_hdr.name << endl;
-        // cout << text_hdr.offset << endl;
-        // // cout << to_string(text_hdr.order) << endl;
-        // cout << text_hdr.size << endl;
-        // cout << to_string(text_hdr.type) << endl;
-
-        
-
-
-        struct branch {
-            uint32_t source_address;
-            string source_line;
-            uint32_t target_address;
-            string target_line;
-        };
-
-        std::vector<branch> branches;
-
-
-        // uint16_t const * data = static_cast<uint16_t const *>(text.data());
-
-        // uint32_t pc = text_hdr.addr;
-        // for(size_t i = 0; i < text.size() / sizeof(uint16_t); ++i) {
-        //     uint16_t const inst1 = data[i];
-
-        //     if(arm_thumb_bl::isValid(inst1) && (i+1) < (text.size() / sizeof(uint16_t))) {
-        //         uint16_t const inst2 = data[i+1];
-
-        //         if(arm_thumb_bl::isValid(inst1, inst2))
-        //         {
-        //             uint32_t const target_address = arm_thumb_bl(inst1, inst2, pc).getTargetAddress();
-
-        //             branches.push_back({.source_address = pc, .target_address = target_address});
-
-        //             pc += sizeof(uint16_t);
-        //             ++i;
-        //         }
+        //     cout << i << " " << hex << lineTable[i].address << dec << " " 
+        //         <<  file_name.name << ":" << lineTable[i].line << ":" << lineTable[i].column;
+        //     if(lineTable[i].end_sequence) {
+        //         cout << " END" << endl;
         //     }
-
-        //     pc += sizeof(uint16_t);
+        //     cout << endl;
         // }
+    }
+    std::sort(end_sequence_map.begin(), end_sequence_map.end());
 
-        // uint8_t const * data2 = static_cast<uint8_t const *>(text.data());
-        ;
-        if(reader.get_machine() == EM_ARM) {
-            disassembler dis (CS_ARCH_ARM, CS_MODE_THUMB);
+    cout << "### dissassemble  text section ###" << endl;
+    // Dissassemble file
+    if(reader.get_machine() == EM_ARM) {
+        disassembler dis (CS_ARCH_ARM, CS_MODE_THUMB);
 
-            auto code = dis(text, text_address);
-            cout << "instruction count: " << code.size() << endl;
+        auto code = dis(text, text_address);
+        cout << "instruction count: " << code.size() << endl;
 
-            for(auto & elem : code) {
+        for(auto & elem : code) {
+            
+            uint32_t const sourceAddress = static_cast<uint32_t>(elem.address);
+            uint32_t targetAddress = 0;
 
-                if(elem.id == ARM_INS_BL) {
-                    uint32_t const sourceAddress = static_cast<uint32_t>(elem.address);
-                    uint32_t targetAddress = 0;
-                    if(elem.detail->arm.op_count == 1) {
-                        targetAddress = elem.detail->arm.operands[0].imm;
-                    }
-
-                    branches.push_back({.source_address = sourceAddress, .target_address = targetAddress});
+            if(elem.id == ARM_INS_BL) {
+                if(elem.detail->arm.op_count == 1) {
+                    targetAddress = elem.detail->arm.operands[0].imm;
                 }
             }
+
+            DisassembledLine disassembledLine = {};
+            disassembledLine.address = sourceAddress;
+            disassembledLine.branch_destination = targetAddress;
+            disassembledLine.opcode_description =  string(elem.mnemonic) + " " + string(elem.op_str); // + " " + to_string(elem.id);
+
+            res.lines.push_back(disassembledLine);
         }
-        else if(reader.get_machine() == EM_386) {
-            disassembler dis (CS_ARCH_X86, CS_MODE_64);
+    }
+    else if(reader.get_machine() == EM_X86_64) {
+        disassembler dis (CS_ARCH_X86, CS_MODE_64);
+
+        auto code = dis(text, text_address);
+        cout << "instruction count: " << code.size() << endl;
+
+        for(auto & elem : code) {
+            
+            uint64_t const sourceAddress = static_cast<uint64_t>(elem.address);
+            uint64_t targetAddress = 0;
+
+            if(elem.id == X86_INS_CALL) {
+                if(elem.detail->x86.op_count == 1) {
+                    targetAddress = elem.detail->x86.operands[0].imm;
+                }
+            }
+
+            DisassembledLine disassembledLine = {};
+            disassembledLine.address = sourceAddress;
+            disassembledLine.branch_destination = targetAddress;
+            disassembledLine.opcode_description =  string(elem.mnemonic) + " " + string(elem.op_str); // + " " + to_string(elem.id);
+
+            res.lines.push_back(disassembledLine);
+        }
+    }
+    else {
+        cout << "Machine not found" << endl;
+    }
+
+    cout << "### mapping line addressses ###" << endl;
+
+    auto next_end_sequence = [](auto iter, auto iter_end, uint64_t address) {
+        while(iter != iter_end && *iter < address) {
+            ++iter;
+        }
+
+        return iter;
+    };
+
+    //find lines for addresses
+    auto iter_end_sequence = end_sequence_map.begin();
+    Line * previous_elem = nullptr;
+    uint64_t previous_address = 0;
+    for(auto & elem : res.lines) {
+        auto iter = line_map.find(elem.address);
+        if(iter != line_map.end()) {
+            elem.line = iter->second;
+
+            if(iter_end_sequence != end_sequence_map.end() && *iter_end_sequence < elem.address) {
+                elem.line.isEndSequence = true;
+                iter_end_sequence = next_end_sequence(iter_end_sequence, end_sequence_map.end(), elem.address);
+            }
+
+            previous_elem = &iter->second;
+            previous_address = elem.address;
+        }
+        else if(previous_elem != nullptr && elem.address - previous_address < 64) {
+             elem.line = *previous_elem;
+        }
+
+        if(elem.branch_destination != 0) {
+            auto iter_branch = line_map.find(elem.branch_destination);
+            if(iter_branch != line_map.end()) {
+                elem.branch_destination_line = iter_branch->second;
+            }
+        }
+    }
+
+    // size_t last_empty = 0;
+    // for(size_t i = 0; i < res.lines.size(); ++i) {
+    //     auto & elem = res.lines[i];
+    //     auto iter = line_map.find(elem.address);
+
+    //     if(iter != line_map.end()) {
+    //         elem.line = iter->second;
+    //         if(last_empty != 0) {
+    //             for(size_t j = last_empty; j < i; ++j){
+    //                 auto & previousLine = res.lines[j].line;
+    //                 previousLine = iter->second;
+    //                 previousLine.isEndSequence = false;
+    //                 last_empty = 0;
+    //             }
+    //         }
+
+    //     }
+    //     else if(last_empty == 0) {
+    //         last_empty = i;
+    //     }
+
+    //     if(elem.branch_destination != 0) {
+    //         auto & branch_destination_line = elem.branch_destination_line;
+    //         auto iter_branch = line_map.find(elem.branch_destination);
+    //         if(iter_branch != line_map.end()) {
+    //             branch_destination_line = iter_branch->second;
+    //         }
+    //     }
+    // }
+
+    return res;
+}
 
 
+int main(int argc, char **argv)
+{
+    try
+    {
+        string filename = "";
+
+        if (argc != 2)
+        {
+            cout << "usage: " << argv[0] << " "
+                    << "elf-file" << endl;
+            filename = "./build/app/app";
+            // filename = "./test/NucleoProject.elf";
+            // filename = "./test/ZEUS_STM32F765NG.elf";
+            // return 2;
         }
-        else {
-            cout << "Machine not found" << endl;
+        else
+        {
+            filename = argv[1];
         }
+
+        DisassembledFile res = disassembleFile(filename);
+
+        cout << "###########################################" << endl;
+        cout << "File: " << res.filename << endl;
+        cout << endl;
+
+        for(auto & line : res.lines) {
+            if(line.line.isEndSequence) {
+                cout << endl;
+            }
+
+            cout << hex << "0x" << line.address << dec << " ";
+            cout << left << setw(25) << line.opcode_description << " ";
+
+            if(!line.line.filename.empty()) {
+                cout << left << setw(25)
+                << line.line.filename + ":" + to_string(line.line.line) + ":" + to_string(line.line.column) << " ";
+            }
+            
+            if(line.branch_destination != 0) {
+                
+                cout << hex << "0x" << line.branch_destination << dec << " ";
+
+                if(!line.branch_destination_line.filename.empty()) {
+                    cout << line.branch_destination_line.filename + ":" + to_string(line.branch_destination_line.line) + ":" + to_string(line.branch_destination_line.column) << " ";
+                }
+            }
+
+            if(line.line.isEndSequence) {
+                cout << "   BEGIN";
+            }
+
+            cout << endl;
+
+
+
+        }
+
+//         // Create elfio reader
+//         ELFIO::elfio reader; 
+//         if ( !reader.load( filename ) ) {      
+//              std::cout << "Can't find or process ELF file " << filename << std::endl;
+//              return 2;
+//         }
+
+//         // Print ELF file properties
+//         std::cout << "ELF file class    : ";
+//         if ( reader.get_class() == ELFCLASS32 )std::cout << "ELF32" << std::endl;
+//         else {
+//             std::cout << "ELF64" << std::endl;
+//         }
+//         std::cout << "ELF file encoding : ";
+//         if ( reader.get_encoding() == ELFDATA2LSB ) {
+//             std::cout << "Little endian" << std::endl;
+//         }
+//         else {
+//             std::cout << "Big endian" << std::endl;
+//         }
+
+//         std::cout << "Machine: " << reader.get_machine() << std::endl;
+
+//         std::span<uint8_t const> debug_line;
+//         std::span<uint8_t const> text;
+//         uint64_t text_address = 0;
+
+//         // Print ELF file sections info
+//         ELFIO::Elf_Half sec_num = reader.sections.size();
+//         std::cout << "Number of sections: " << sec_num << std::endl;
+//         for ( int i = 0; i < sec_num; ++i ) {
+//             const ELFIO::section* psec = reader.sections[i];
+//             std::cout << "  [" << i << "] "<< psec->get_name()<< "\t"<< psec->get_size() << " address: " << hex << psec->get_address() << dec << std::endl;
+//             // Access section's data
+//             // const char* p = reader.sections[i]->get_data();
+
+//             if(psec->get_name() == ".debug_line") {
+//                 debug_line =  std::span<uint8_t const>(reinterpret_cast<uint8_t const *>(reader.sections[i]->get_data()), static_cast<size_t>(psec->get_size()));
+//             }
+//             else if(psec->get_name() == ".text") {
+//                 text =  std::span<uint8_t const>(reinterpret_cast<uint8_t const *>(reader.sections[i]->get_data()), static_cast<size_t>(psec->get_size()));
+//                 text_address = psec->get_address();
+//             }
+//         }
+
+
+//         // // Load file
+//         // auto const loader = std::make_shared<elf_file_loader>(filename);
+//         // elf::elf ef(loader);
+
+//         // // Print elf sections
+//         // auto const &hdr = ef.get_hdr();
+
+//         // cout << "elf entry: " << hdr.entry << endl;
+//         // cout << "machine: " << hdr.machine << endl;
+
+//         // for (auto const &sec : ef.sections())
+//         // {
+//         //     auto const &hdr = sec.get_hdr();
+//         //     cout << "section " << sec.get_name() << " " << hex << hdr.addr
+//         //             << " " << dec <<  hdr.offset << " " << hdr.size << endl;
+//         // }
+//         // cout << endl;
+
+//         // // Print line table
+//         // auto const elf_loader = dwarf::elf::create_loader(ef);
+//         // dwarf::dwarf dw(elf_loader);
+
+//         // std::vector<file_table_entry> line_table;
+
+//         // for(auto cu : dw.compilation_units()) {
+
+//         //     uint32_t const offset = cu.get_section_offset();
+
+//         //     cout << offset << endl;
+
+//         //     add_lines(line_table, cu.get_line_table());
+
+//         //     // print_line_table(cu.get_line_table());
+//         // }
+
+//         // std::sort(line_table.begin(), line_table.end(),
+//         //     [](file_table_entry const & left, file_table_entry const & right) {
+//         //         return left.address < right.address;
+//         //     }
+//         // );
+
+//         // cout << endl;
+//         // auto const & comment = ef.get_section(".comment");
+//         // char const * comment_text = static_cast<char const *>(comment.data());
+//         // cout << comment_text << endl;
+//         // cout << endl;
+
+//         // auto const & debug_line = ef.get_section(".debug_line");
+//         // size_t const debug_line_size = debug_line.size();
+//         // uint8_t const * debug_line_data = static_cast<uint8_t const *>(debug_line.data());
+//         // // cout << debug_line_data << endl;
+
+//         // auto const lineNumberProgramHeader = ReadLineNumberProgramHeader(debug_line_data);
+//         // create_line_table(debug_line_data);
+//         auto const debug_line_headers = dwarf::debug_line::Header::read(debug_line);
+//         // size_t const debug_line_headers_size = debug_line_headers.size();
+
+
+//         // store in unordered set
+
+
+//         unordered_map<uint64_t, LineMapData> line_map;
+
+//         std::vector<std::vector<dwarf::debug_line::StateMachineRegisters>> lineTables;
+//         for(auto const & header : debug_line_headers) {
+//             // header.print(cout);
+
+//             auto const lineTable = dwarf::debug_line::decode_data(header);
+//             cout << "line table size: " << lineTable.size() << endl;;
+
+//             for(auto const & elem : lineTable) {
+//                 if(!elem.end_sequence) {
+//                     auto const address = elem.address;
+//                     auto const & fileName = header.file_names[elem.file - 1];
+//                     LineMapData lineMapData = {
+//                         filename : std::string_view(fileName.name),
+//                         path : std::string_view(header.include_directories[fileName.include_directories_index - 1]),
+//                         line : elem.line,
+//                         column : elem.column
+//                     };
+
+//                     line_map.insert({address, lineMapData});
+//                 }               
+//             }
+
+
+//             lineTables.push_back(std::move(lineTable));
+
+//             // for(size_t i = 0; i < lineTable.size(); ++i) {
+//             //     auto const & file_name = header.file_names[lineTable[i].file - 1];
+
+//             //     cout << i << " " << hex << lineTable[i].address << dec << " " 
+//             //         <<  file_name.name << ":" << lineTable[i].line << ":" << lineTable[i].column;
+//             //     if(lineTable[i].end_sequence) {
+//             //         cout << " END" << endl;
+//             //     }
+//             //     cout << endl;
+//             // }
+//         }
+
+
+        
+
+
+//         // read all bl instructions
+//         // cout << endl;
+//         // auto const & text2 = ef.get_section(".text");
+//         // cout << text.get_name() << endl;
+//         // cout << text.size() << endl;
+
+//         // auto const & text_hdr = text2.get_hdr();
+
+//         // cout << endl;
+//         // cout << text_hdr.addr << endl;
+//         // cout << text_hdr.addralign << endl;
+//         // cout << text_hdr.entsize << endl;
+//         // cout << to_string(text_hdr.flags) << endl;
+//         // cout << text_hdr.info << endl;
+//         // cout << text_hdr.link << endl;
+//         // cout << text_hdr.name << endl;
+//         // cout << text_hdr.offset << endl;
+//         // // cout << to_string(text_hdr.order) << endl;
+//         // cout << text_hdr.size << endl;
+//         // cout << to_string(text_hdr.type) << endl;
+
+        
+
+
+//         struct branch {
+//             uint32_t source_address;
+//             string source_line;
+//             uint32_t target_address;
+//             string target_line;
+//         };
+
+//         std::vector<branch> branches;
+
+
+//         // uint16_t const * data = static_cast<uint16_t const *>(text.data());
+
+//         // uint32_t pc = text_hdr.addr;
+//         // for(size_t i = 0; i < text.size() / sizeof(uint16_t); ++i) {
+//         //     uint16_t const inst1 = data[i];
+
+//         //     if(arm_thumb_bl::isValid(inst1) && (i+1) < (text.size() / sizeof(uint16_t))) {
+//         //         uint16_t const inst2 = data[i+1];
+
+//         //         if(arm_thumb_bl::isValid(inst1, inst2))
+//         //         {
+//         //             uint32_t const target_address = arm_thumb_bl(inst1, inst2, pc).getTargetAddress();
+
+//         //             branches.push_back({.source_address = pc, .target_address = target_address});
+
+//         //             pc += sizeof(uint16_t);
+//         //             ++i;
+//         //         }
+//         //     }
+
+//         //     pc += sizeof(uint16_t);
+//         // }
+
+//         // uint8_t const * data2 = static_cast<uint8_t const *>(text.data());
+//         ;
+//         if(reader.get_machine() == EM_ARM) {
+//             disassembler dis (CS_ARCH_ARM, CS_MODE_THUMB);
+
+//             auto code = dis(text, text_address);
+//             cout << "instruction count: " << code.size() << endl;
+
+//             for(auto & elem : code) {
+
+//                 if(elem.id == ARM_INS_BL) {
+//                     uint32_t const sourceAddress = static_cast<uint32_t>(elem.address);
+//                     uint32_t targetAddress = 0;
+//                     if(elem.detail->arm.op_count == 1) {
+//                         targetAddress = elem.detail->arm.operands[0].imm;
+//                     }
+
+//                     branches.push_back({.source_address = sourceAddress, .target_address = targetAddress});
+//                 }
+//             }
+//         }
+//         else if(reader.get_machine() == EM_386) {
+//             disassembler dis (CS_ARCH_X86, CS_MODE_64);
+//         }
+//         else {
+//             cout << "Machine not found" << endl;
+//         }
 
         
 
        
 
             
-//             cout << hex << elem.address << " ";
+// //             cout << hex << elem.address << " ";
             
-//             for(size_t i = 0; i < elem.size; ++i) {
-//                 cout << hex << static_cast<uint32_t>(elem.bytes[i]);
+// //             for(size_t i = 0; i < elem.size; ++i) {
+// //                 cout << hex << static_cast<uint32_t>(elem.bytes[i]);
+// //             }
+            
+
+// //             cout << " " <<  elem.mnemonic << " " << elem.op_str << " " << dec << elem.id  << endl;
+
+// //             if(elem.id != 0) {
+// // cs_detail *detail = elem.detail;
+
+// //             for(size_t i = 0; i < detail->arm.op_count; ++i) {
+// //                 cs_arm_op & op = detail->arm.operands[i];
+// //                 switch(op.type) {
+// //                 case ARM_OP_INVALID: ///< = CS_OP_INVALID (Uninitialized).
+// //                     cout << " invalid";
+// //                     break;
+// //                 case ARM_OP_REG: ///< = CS_OP_REG (Register operand).
+// //                     cout << " reg: " << op.reg;
+// //                     break;
+// //                 case ARM_OP_IMM: ///< = CS_OP_IMM (Immediate operand).
+// //                     cout << " imm: " << op.imm;
+// //                     break;
+// //                 case ARM_OP_MEM: ///< = CS_OP_MEM (Memory operand).
+// //                     cout << " mem: ";
+// //                     break;
+// //                 case ARM_OP_FP:  ///< = CS_OP_FP (Floating-Point operand).
+// //                     cout << " fp: " << op.fp;
+// //                     break;
+// //                 case ARM_OP_CIMM: ///< C-Immediate (coprocessor registers)
+// //                     cout << " cimm: " << op.imm;
+// //                     break;
+// //                 case ARM_OP_PIMM: ///< P-Immediate (coprocessor registers)
+// //                     cout << " pimm: " << op.imm;
+// //                     break;
+// //                 case ARM_OP_SETEND:	///< operand for SETEND instruction
+// //                     cout << " setend: " << op.setend;
+// //                     break;
+// //                 case ARM_OP_SYSREG:	///< MSR/MRS special register operand
+// //                     cout << " sysreg: ";
+// //                     break;
+// //                 }
+// //                 cout << endl;
+
+//             // }
+
+//             // for (size_t i = 0; i < detail->regs_read_count; i++) {
+//             //     cout << detail->regs_read[i] << " ";
+// 			// }
+//             // cout << endl;
+//             // }
+            
+
+        
+
+//         cout << "branches size: " << branches.size() << endl;
+
+
+        
+
+//         // for(auto const & lineTable : lineTables) {
+//         //     for(auto const & elem : lineTable) {
+//         //         if(!elem.end_sequence) {
+//         //             auto const address = elem.address;
+//         //             line_map.insert({address, elem});
+//         //         }
+//         //     }
+//         // }
+
+//         cout << "line_map size: " << line_map.size() << endl;
+
+//         // map addresses
+
+//         // auto assemble = [](auto const & lineMapData) {
+//         //     return 
+//         // }
+
+//         for(auto & branch : branches) {
+//             auto iter = line_map.find(branch.source_address);
+//             if(iter != line_map.end()) {
+//                 branch.source_line = string(iter->second.filename) + ":" + to_string(iter->second.line) + ":" + to_string(iter->second.column);
 //             }
-            
 
-//             cout << " " <<  elem.mnemonic << " " << elem.op_str << " " << dec << elem.id  << endl;
-
-//             if(elem.id != 0) {
-// cs_detail *detail = elem.detail;
-
-//             for(size_t i = 0; i < detail->arm.op_count; ++i) {
-//                 cs_arm_op & op = detail->arm.operands[i];
-//                 switch(op.type) {
-//                 case ARM_OP_INVALID: ///< = CS_OP_INVALID (Uninitialized).
-//                     cout << " invalid";
-//                     break;
-//                 case ARM_OP_REG: ///< = CS_OP_REG (Register operand).
-//                     cout << " reg: " << op.reg;
-//                     break;
-//                 case ARM_OP_IMM: ///< = CS_OP_IMM (Immediate operand).
-//                     cout << " imm: " << op.imm;
-//                     break;
-//                 case ARM_OP_MEM: ///< = CS_OP_MEM (Memory operand).
-//                     cout << " mem: ";
-//                     break;
-//                 case ARM_OP_FP:  ///< = CS_OP_FP (Floating-Point operand).
-//                     cout << " fp: " << op.fp;
-//                     break;
-//                 case ARM_OP_CIMM: ///< C-Immediate (coprocessor registers)
-//                     cout << " cimm: " << op.imm;
-//                     break;
-//                 case ARM_OP_PIMM: ///< P-Immediate (coprocessor registers)
-//                     cout << " pimm: " << op.imm;
-//                     break;
-//                 case ARM_OP_SETEND:	///< operand for SETEND instruction
-//                     cout << " setend: " << op.setend;
-//                     break;
-//                 case ARM_OP_SYSREG:	///< MSR/MRS special register operand
-//                     cout << " sysreg: ";
-//                     break;
-//                 }
-//                 cout << endl;
-
-            // }
-
-            // for (size_t i = 0; i < detail->regs_read_count; i++) {
-            //     cout << detail->regs_read[i] << " ";
-			// }
-            // cout << endl;
-            // }
-            
-
-        
-
-        cout << branches.size() << endl;
+//             auto iter2 = line_map.find(branch.target_address);
+//             if(iter2 != line_map.end()) {
+//                 branch.target_line = string(iter2->second.filename) + ":" + to_string(iter2->second.line) + ":" + to_string(iter2->second.column);
+//             }
+//         }
 
 
-        // for(auto & elem: branches) {
-        //     auto  iter = std::lower_bound(line_table.cbegin(), line_table.cend(), 
-        //         elem.source_address, 
-        //         [](auto const & left, auto const & right) {
-        //             return left.address < right;
-        //         });
 
-        //     if(iter != line_table.cend()) {
-        //         elem.source_line = (--iter)->line;
-        //     }   
+//         // for(auto & elem: branches) {
+//         //     auto  iter = std::lower_bound(line_table.cbegin(), line_table.cend(), 
+//         //         elem.source_address, 
+//         //         [](auto const & left, auto const & right) {
+//         //             return left.address < right;
+//         //         });
 
-        //     auto  iter2 = std::lower_bound(line_table.cbegin(), line_table.cend(), 
-        //         elem.target_address, 
-        //         [](auto const & left, auto const & right) {
-        //             return left.address < right;
-        //         });
+//         //     if(iter != line_table.cend()) {
+//         //         elem.source_line = (--iter)->line;
+//         //     }   
 
-        //     if(iter2 != line_table.cend()) {
-        //         elem.target_line = iter2->line;
-        //     } 
-        // }
+//         //     auto  iter2 = std::lower_bound(line_table.cbegin(), line_table.cend(), 
+//         //         elem.target_address, 
+//         //         [](auto const & left, auto const & right) {
+//         //             return left.address < right;
+//         //         });
+
+//         //     if(iter2 != line_table.cend()) {
+//         //         elem.target_line = iter2->line;
+//         //     } 
+//         // }
 
 
-        // for(auto & elem: branches) {
-        //    elem.source_line = find_address(dw, elem.source_address);
-        //    elem.target_line = find_address(dw, elem.target_address);
-        // }
+//         // for(auto & elem: branches) {
+//         //    elem.source_line = find_address(dw, elem.source_address);
+//         //    elem.target_line = find_address(dw, elem.target_address);
+//         // }
 
         
 
 
-        // for(auto & elem : branches) {
-        //     cout << hex << elem.source_address << " " << elem.target_address << endl;;
-        //     cout << elem.source_line << endl;
-        //     cout << elem.target_line << endl;
-        //     cout << endl;
-        // }
+//         for(auto & elem : branches) {
+//             cout << hex << elem.source_address << " " << elem.target_address << endl;;
+//             cout << elem.source_line << endl;
+//             cout << elem.target_line << endl;
+//             cout << endl;
+//         }
 
         cout << "finished" << endl;
     }
@@ -383,7 +731,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    cout << "finished more" << endl;
+    // cout << "finished more" << endl;
     return 0;
 }
 

@@ -84,7 +84,7 @@ Header Header::read_one(std::span<uint8_t const> data)
     memcpy(&res.version, &data[i], sizeof(res.version));  i += sizeof(res.version);
     
     if(res.version != 3) {
-        std::cout << "Header version " << res.version << std::endl;
+        std::cout << "Warning: .debug_line section with header version " << res.version << " detected (only version 3 is supported)" << std::endl;
         return res;
     }
     assert(res.version == 3);
