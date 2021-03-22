@@ -41,11 +41,11 @@ if (EMSCRIPTEN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
      -s DISABLE_EXCEPTION_CATCHING=0 \
      -s FORCE_FILESYSTEM=1 \
+     -s EXPORTED_RUNTIME_METHODS='[ccall, cwrap]' \
+     -s MODULARIZE \
      -s ALLOW_MEMORY_GROWTH=1"
      )
-    #  -s MODULARIZE \
      #  -s EXPORTED_FUNCTIONS=['_sayHi'] \
-    #  -s EXPORTED_RUNTIME_METHODS='[ccall, cwrap]' \
 else()
     add_compile_options(
         -fsanitize=address 
