@@ -43,8 +43,9 @@ if (EMSCRIPTEN)
      -s FORCE_FILESYSTEM=1 \
      -s EXPORTED_RUNTIME_METHODS='[ccall, cwrap]' \
      -s MODULARIZE \
-     -s ALLOW_MEMORY_GROWTH=1"
+     -s TOTAL_MEMORY=1024MB "
      )
+     #  -s ALLOW_MEMORY_GROWTH=1 \
      #  -s EXPORTED_FUNCTIONS=['_sayHi'] \
 else()
     add_compile_options(

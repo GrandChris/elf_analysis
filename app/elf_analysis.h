@@ -28,3 +28,5 @@ struct DisassembledFile {
 
 
 DisassembledFile disassembleFile(std::string const & filename, bool print_debug_info = true);
+DisassembledFile disassembleData(uint8_t const data[], size_t const length, bool print_debug_info = true);
+DisassembledFile disassembleInput(std::istream & in, bool print_debug_info = true);

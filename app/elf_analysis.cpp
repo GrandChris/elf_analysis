@@ -1,6 +1,5 @@
 
 
-
 #include "elf_analysis.h"
 #include "disassembler.h"
 
@@ -12,13 +11,34 @@
 
 #include "dwarf/debug_line/header.h"
 #include "dwarf/debug_line/state_machine.h"
-#include <unordered_map>
 #include <chrono>
-
+#include <filesystem>
+#include <unordered_map>
+#include <sstream>
 
 using namespace std;
 
 DisassembledFile disassembleFile(string const & filename, bool print_debug_info) 
+{
+    std::ifstream stream;
+        stream.open( filename.c_str(), std::ios::in | std::ios::binary );
+        if ( !stream ) {
+            return {};
+        }
+
+    return disassembleInput(stream, print_debug_info);  
+}
+
+DisassembledFile disassembleData(uint8_t const data[], size_t const length, bool print_debug_info) 
+{
+    string datastr(reinterpret_cast<char const *>(data), length);
+    istringstream in(datastr);
+
+    return disassembleInput(in, print_debug_info);
+}
+
+
+DisassembledFile disassembleInput(std::istream & in, bool print_debug_info) 
 {
     auto start = chrono::steady_clock::now();
 
@@ -34,13 +54,26 @@ DisassembledFile disassembleFile(string const & filename, bool print_debug_info)
     cout << "### reading file ###" << endl;
 
     DisassembledFile res = {};
-    res.filename = filename;
+    res.filename = "";
 
     // Create elfio reader
     ELFIO::elfio reader; 
-    if ( !reader.load( filename ) ) {      
-            std::cout << "Can't find or process ELF file " << filename << std::endl;
-            return {};
+    if ( !reader.load( in ) ) {      
+            std::cout << "Can't find or process ELF file " << std::endl;
+            // std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
+            // std::cout << "Files in the directory: " << endl;
+
+            // string path = std::filesystem::current_path();
+
+            // for (const auto & file : std::filesystem::directory_iterator(path))
+            //     cout << file.path() << endl;
+
+            // std::cout << "Files in working: " << endl;
+
+            // string path2 = string(std::filesystem::current_path()) + "/working";
+
+            // for (const auto & file : std::filesystem::directory_iterator(path2))
+            //     cout << file.path() << endl;
     }
 
     if(print_debug_info) {

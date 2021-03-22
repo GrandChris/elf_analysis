@@ -43,57 +43,55 @@ int daysInWeek() {
 }
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int read_file(char const * filename);
-
-EMSCRIPTEN_KEEPALIVE
-unsigned int read_file_debug(char const * filename);
-
-EMSCRIPTEN_KEEPALIVE
-char const * get_filename();
-
-EMSCRIPTEN_KEEPALIVE
-unsigned int get_lines_size();
-
-EMSCRIPTEN_KEEPALIVE
-unsigned int get_address(unsigned int line);
-
-EMSCRIPTEN_KEEPALIVE
-char const * get_opcode_description(unsigned int line);
-
-EMSCRIPTEN_KEEPALIVE
-unsigned int get_branch_destination(unsigned int line);
+unsigned int elf_analysis_analyse_data(uint8_t * data, unsigned int size);
 
 
 EMSCRIPTEN_KEEPALIVE
-char const * get_line_filename(unsigned int line);
+char const * elf_analysis_get_filename();
 
 EMSCRIPTEN_KEEPALIVE
-char const * get_line_path(unsigned int line);
+unsigned int elf_analysis_get_lines_size();
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int get_line_line(unsigned int line);
+unsigned int elf_analysis_get_address(unsigned int line);
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int get_line_column(unsigned int line);
+char const * elf_analysis_get_opcode_description(unsigned int line);
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int get_line_isEndSequence(unsigned int line);
+unsigned int elf_analysis_get_branch_destination(unsigned int line);
 
 
 EMSCRIPTEN_KEEPALIVE
-char const * get_branch_destination_line_filename(unsigned int line);
+char const * elf_analysis_get_line_filename(unsigned int line);
 
 EMSCRIPTEN_KEEPALIVE
-char const * get_branch_destination_line_path(unsigned int line);
+char const * elf_analysis_get_line_path(unsigned int line);
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int get_branch_destination_line_line(unsigned int line);
+unsigned int elf_analysis_get_line_line(unsigned int line);
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int get_branch_destination_line_column(unsigned int line);
+unsigned int elf_analysis_get_line_column(unsigned int line);
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int get_branch_destination_line_isEndSequence(unsigned int line);
+unsigned int elf_analysis_get_line_isEndSequence(unsigned int line);
+
+
+EMSCRIPTEN_KEEPALIVE
+char const * elf_analysis_get_branch_destination_line_filename(unsigned int line);
+
+EMSCRIPTEN_KEEPALIVE
+char const * elf_analysis_get_branch_destination_line_path(unsigned int line);
+
+EMSCRIPTEN_KEEPALIVE
+unsigned int elf_analysis_get_branch_destination_line_line(unsigned int line);
+
+EMSCRIPTEN_KEEPALIVE
+unsigned int elf_analysis_get_branch_destination_line_column(unsigned int line);
+
+EMSCRIPTEN_KEEPALIVE
+unsigned int elf_analysis_get_branch_destination_line_isEndSequence(unsigned int line);
 
 
 // char const * get_filename(unsigned int table, unsigned int index);
@@ -113,78 +111,76 @@ unsigned int get_branch_destination_line_isEndSequence(unsigned int line);
 
 DisassembledFile disassembledFile = {};
 
+#include <iostream>
+
 extern "C" {
 
-unsigned int read_file(char const * filename) {
-    disassembledFile = disassembleFile(filename, false);
-    return true;
-}
-
-unsigned int read_file_debug(char const * filename) {
-    disassembledFile = disassembleFile(filename, true);
+unsigned int elf_analysis_analyse_data(uint8_t * data, unsigned int size) {
+    // std::cout << "passed parameter, size: " << std::endl;
+    disassembledFile = disassembleData(data, size, false);
     return true;
 }
 
 
-char const * get_filename() {
+char const * elf_analysis_get_filename() {
     return disassembledFile.filename.c_str();
 }
 
-unsigned int get_lines_size() {
+unsigned int elf_analysis_get_lines_size() {
     return disassembledFile.lines.size();
 }
 
-unsigned int get_address(unsigned int line) {
+unsigned int elf_analysis_get_address(unsigned int line) {
     return disassembledFile.lines[line].address;
 }
 
-char const * get_opcode_description(unsigned int line) {
+char const * elf_analysis_get_opcode_description(unsigned int line) {
     return disassembledFile.lines[line].opcode_description.c_str();
 }
 
-unsigned int get_branch_destination(unsigned int line) {
+unsigned int elf_analysis_get_branch_destination(unsigned int line) {
     return disassembledFile.lines[line].branch_destination;
 }
 
 
-char const * get_line_filename(unsigned int line) {
+char const * elf_analysis_get_line_filename(unsigned int line) {
     return disassembledFile.lines[line].line.filename.c_str();
 }
 
-char const * get_line_path(unsigned int line) {
+char const * elf_analysis_get_line_path(unsigned int line) {
     return disassembledFile.lines[line].line.path.c_str();
 }
 
-unsigned int get_line_line(unsigned int line) {
+unsigned int elf_analysis_get_line_line(unsigned int line) {
     return disassembledFile.lines[line].line.line;
 }
 
-unsigned int get_line_column(unsigned int line) {
+unsigned int elf_analysis_get_line_column(unsigned int line) {
     return disassembledFile.lines[line].line.column;
 }
 
-unsigned int get_line_isEndSequence(unsigned int line) {
+unsigned int elf_analysis_get_line_isEndSequence(unsigned int line) {
     return disassembledFile.lines[line].line.isEndSequence;
 }
 
 
-char const * get_branch_destination_line_filename(unsigned int line) {
+char const * elf_analysis_get_branch_destination_line_filename(unsigned int line) {
     return disassembledFile.lines[line].branch_destination_line.filename.c_str();
 }
 
-char const * get_branch_destination_line_path(unsigned int line) {
+char const * elf_analysis_get_branch_destination_line_path(unsigned int line) {
     return disassembledFile.lines[line].branch_destination_line.path.c_str();
 }
 
-unsigned int get_branch_destination_line_line(unsigned int line) {
+unsigned int elf_analysis_get_branch_destination_line_line(unsigned int line) {
     return disassembledFile.lines[line].branch_destination_line.line;
 }
 
-unsigned int get_branch_destination_line_column(unsigned int line) {
+unsigned int elf_analysis_get_branch_destination_line_column(unsigned int line) {
     return disassembledFile.lines[line].branch_destination_line.column;
 }
 
-unsigned int get_branch_destination_line_isEndSequence(unsigned int line) {
+unsigned int elf_analysis_get_branch_destination_line_isEndSequence(unsigned int line) {
     return disassembledFile.lines[line].branch_destination_line.isEndSequence;
 }
 
