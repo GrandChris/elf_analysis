@@ -54,7 +54,7 @@ jobs:
     - name: Archive emscripten build artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: wasm_lib 
+        name: elf_analysis 
         path: |
           build_emcc/app/*.js 
           build_emcc/app/*.wasm 
