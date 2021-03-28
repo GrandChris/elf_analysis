@@ -17,14 +17,14 @@ is compiled to WebAssembly using [Emscripten](https://emscripten.org/) to be use
 - Uses VSCode [Remote-Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) for development
 - Uses the same Docker container to build the project with [Github Actions](https://github.com/GrandChris/elf_analysis/actions)
 - Dependencies (elfio and capstone) are fetched during CMake configure with [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html)
-- Code is compiled using GCC 10
-- Code is compiled using [Emscripten](https://emscripten.org/)
+- The source code is compiled using GCC 10
+- The source code is compiled using [Emscripten](https://emscripten.org/)
 
 
 ## Limitations
-- It is designed to work with small codebase (for embedded development)
-- It supports only ARM Thumb Code for the '.text' section and Dwarf 3 debug information (standard when building with GCC)  in the '.debug_line' section
-- It also has a limited support for x86-64 Code (no guarantees here)
+- It is designed to work with a small codebase (for embedded development)
+- It supports only 'ARM Thumb Code' for the '.text' section and 'Dwarf 3' debug information (standard when building with GCC)  in the '.debug_line' section
+- It also has a limited support for 'x86-64' code (no guarantees here)
 
 ## How to build
 #### GCC
