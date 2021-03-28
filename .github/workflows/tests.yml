@@ -1,4 +1,4 @@
-name: Tests
+name: Build
 
 on: [push]
 
@@ -64,6 +64,7 @@ jobs:
         path: |
           build_emcc/app/*.js 
           build_emcc/app/*.wasm 
+          test/sample_application.js
 
     # - name: Test
     #   run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/test.sh"
