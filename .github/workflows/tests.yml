@@ -45,17 +45,19 @@ jobs:
 
     # Archive artifacts
 
-    - name: Archive GCC build artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: app
-        path: build/app/*.exe
+    # - name: Archive GCC build artifacts
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: app
+    #     path: build/app/*.exe
 
     - name: Archive emscripten build artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: wasm_lib
-        path: build_emcc/app/*.js
+        name: wasm_lib 
+        path: |
+          build_emcc/app/*.js 
+          build_emcc/app/*.wasm 
 
     # - name: Test
     #   run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/test.sh"
