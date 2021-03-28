@@ -42,7 +42,7 @@ async function main() {
         var elf_analysis = await create_elf_analysis('../build_emcc/app/elf_analysis.js');
     }
     
-    const file = './test/NucleoProject.elf.elf';
+    const file = './test/NucleoProject.elf';
 
     try {
         const data = fs.readFileSync(file, null);
@@ -50,9 +50,9 @@ async function main() {
         console.log("Number of Lines: ", elf_analysis.get_lines_size());    // just to check if it is working
 
         // Allocate some space in the heap for the data (making sure to use the appropriate memory size of the elements)
-        buffer = instance._malloc(data.length)
+        buffer = elf_analysis.instance._malloc(data.length)
         // Assign the data to the heap - Keep in mind bytes per element
-        instance.HEAPU8.set(data, buffer);
+        elf_analysis.instance.HEAPU8.set(data, buffer);
 
         var ret = elf_analysis.analyse_data(buffer, data.length);
         console.log("Number of Lines: ", elf_analysis.get_lines_size());
