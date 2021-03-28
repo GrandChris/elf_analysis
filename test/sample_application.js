@@ -24,13 +24,13 @@ factory().then((instance) => {
     var elf_analysis_get_line_path = instance.cwrap('elf_analysis_get_line_path', 'string', ['number']);
     var elf_analysis_get_line_line = instance.cwrap('elf_analysis_get_line_line', 'number', ['number']);
     var elf_analysis_get_line_column = instance.cwrap('elf_analysis_get_line_column', 'number', ['number']);
-    var elf_analysis_get_line_isEndSequence = instance.cwrap('elf_analysis_get_line_isEndSequence', 'number', ['number']);
+    var elf_analysis_get_line_isStartSequence = instance.cwrap('elf_analysis_get_line_isStartSequence', 'number', ['number']);
 
     var elf_analysis_get_branch_destination_line_filename = instance.cwrap('elf_analysis_get_branch_destination_line_filename', 'string', ['number']);
     var elf_analysis_get_branch_destination_line_path = instance.cwrap('elf_analysis_get_branch_destination_line_path', 'string', ['number']);
     var elf_analysis_get_branch_destination_line_line = instance.cwrap('elf_analysis_get_branch_destination_line_line', 'number', ['number']);
     var elf_analysis_get_branch_destination_line_column = instance.cwrap('elf_analysis_get_branch_destination_line_column', 'number', ['number']);
-    var elf_analysis_get_branch_destination_line_isEndSequence = instance.cwrap('elf_analysis_get_branch_destination_line_isEndSequence', 'number', ['number']);
+    var elf_analysis_get_branch_destination_line_isStartSequence = instance.cwrap('elf_analysis_get_branch_destination_line_isStartSequence', 'number', ['number']);
 
 
 

@@ -8,18 +8,18 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Add exe
-add_executable(app)
+add_executable(elf_analysis)
     
 # Add source files
  file(GLOB APP_SOURCE_FILES CONFIGURE_DEPENDS
      ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     )
     
-target_sources(app PRIVATE ${APP_SOURCE_FILES})
+target_sources(elf_analysis PRIVATE ${APP_SOURCE_FILES})
     
  # Link libraries
-target_link_libraries(app PRIVATE 
-    elf_analysis
+target_link_libraries(elf_analysis PRIVATE 
+    elf_analysis_lib
 )
 
 

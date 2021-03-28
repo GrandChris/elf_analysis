@@ -56,9 +56,9 @@ else()
 endif()
 
 # Add library
-add_library(${PROJECT_NAME})
+add_library(elf_analysis_lib)
 
-target_compile_options(${PROJECT_NAME} PUBLIC 
+target_compile_options(elf_analysis_lib PUBLIC 
     -ggdb3
 )
     
@@ -70,7 +70,7 @@ target_compile_options(${PROJECT_NAME} PUBLIC
     # )
     
 # Include Directories
-target_include_directories(${PROJECT_NAME} PUBLIC 
+target_include_directories(elf_analysis_lib PUBLIC 
     "./include"
     # "./capstone/include"
     "${CMAKE_BINARY_DIR}/_deps/capstone-src/include"
@@ -84,27 +84,27 @@ file(GLOB SOURCE_FILES CONFIGURE_DEPENDS
     "./source/*/*/*.cpp"
 )
 
-target_sources(${PROJECT_NAME} PUBLIC ${SOURCE_FILES})
+target_sources(elf_analysis_lib PUBLIC ${SOURCE_FILES})
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PUBLIC 
+target_link_libraries(elf_analysis_lib PUBLIC 
     elfio
     capstone-static
     $<$<CXX_COMPILER_ID:Clang>:nodefs.js>
 )
 
-# target_link_options(${PROJECT_NAME} PUBLIC
+# target_link_options(elf_analysis_lib PUBLIC
 #     # LINKER:-Map=mapfile
 #     LINKER:-gc-sections
 # )
 
 if (EMSCRIPTEN)
-    target_link_options(${PROJECT_NAME} PUBLIC
+    target_link_options(elf_analysis_lib PUBLIC
         LINKER: -s DISABLE_EXCEPTION_CATCHING=0
         # LINKER: -s ALLOW_MEMORY_GROWTH=1
     )
 else()
-    target_link_libraries(${PROJECT_NAME} PUBLIC 
+    target_link_libraries(elf_analysis_lib PUBLIC 
         ${LIBASAN}
         ${LIBLSAN}
         ${LIBUBSAN}

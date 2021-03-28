@@ -1,14 +1,14 @@
-// 
-// File: header.h
-// Author: GrandChris
-// Date: 2021-03-18
-// Brief: The header of the dwarf debug_line section
-//
+/// 
+/// File:   header.h
+/// Author: GrandChris
+/// Date:   2021-03-18
+/// Brief:  The header of the dwarf debug_line section
+///
 
 #pragma once
 
-#include <iostream>
 #include <cstdint>
+#include <iostream>
 #include <ostream>
 #include <span>
 #include <string>

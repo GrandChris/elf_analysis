@@ -1,23 +1,30 @@
-
+/// 
+/// \file: elf_analysis.cpp
+/// \author: GrandChris
+/// \date: 2021-03-18
+/// \brief: Analyses a .elf file
+///
 
 #include "elf_analysis.h"
 #include "disassembler.h"
-
-// #pragma GCC diagnostic push
-// #pragma GCC diagnostic ignored "-Wall"
-// #pragma GCC diagnostic ignored "-Wextra"
-#include "elfio/elfio.hpp"
-// #pragma GCC diagnostic pop
-
 #include "dwarf/debug_line/header.h"
 #include "dwarf/debug_line/state_machine.h"
+#include "elfio/elfio.hpp"
 #include <chrono>
 #include <filesystem>
-#include <unordered_map>
 #include <sstream>
+#include <unordered_map>
 
 using namespace std;
 
+/// 
+/// \brief   Reads a .elf file and process its data
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param filename path to the .elf file
+/// \param print_debug_info if debug info should be printed to "cout"
+/// \return  A struct with the decoded data of the .elf file
+///
 DisassembledFile disassembleFile(string const & filename, bool print_debug_info) 
 {
     std::ifstream stream;
@@ -29,6 +36,15 @@ DisassembledFile disassembleFile(string const & filename, bool print_debug_info)
     return disassembleInput(stream, print_debug_info);  
 }
 
+/// 
+/// \brief   Process the binary data of a .elf file
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param data Array with binary data of a .elf file
+/// \param length Length of the array
+/// \param print_debug_info if debug info should be printed to "cout"
+/// \return  A struct with the decoded data of the .elf file
+///
 DisassembledFile disassembleData(uint8_t const data[], size_t const length, bool print_debug_info) 
 {
     string datastr(reinterpret_cast<char const *>(data), length);
@@ -37,7 +53,14 @@ DisassembledFile disassembleData(uint8_t const data[], size_t const length, bool
     return disassembleInput(in, print_debug_info);
 }
 
-
+/// 
+/// \brief   Process the binary data of a .elf file
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param in Binary data stream with the content of the .elf file
+/// \param print_debug_info if debug info should be printed to "cout"
+/// \return  A struct with the decoded data of the .elf file
+///
 DisassembledFile disassembleInput(std::istream & in, bool print_debug_info) 
 {
     auto start = chrono::steady_clock::now();
@@ -60,20 +83,6 @@ DisassembledFile disassembleInput(std::istream & in, bool print_debug_info)
     ELFIO::elfio reader; 
     if ( !reader.load( in ) ) {      
             std::cout << "Can't find or process ELF file " << std::endl;
-            // std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
-            // std::cout << "Files in the directory: " << endl;
-
-            // string path = std::filesystem::current_path();
-
-            // for (const auto & file : std::filesystem::directory_iterator(path))
-            //     cout << file.path() << endl;
-
-            // std::cout << "Files in working: " << endl;
-
-            // string path2 = string(std::filesystem::current_path()) + "/working";
-
-            // for (const auto & file : std::filesystem::directory_iterator(path2))
-            //     cout << file.path() << endl;
     }
 
     if(print_debug_info) {
@@ -244,7 +253,7 @@ DisassembledFile disassembleInput(std::istream & in, bool print_debug_info)
             elem.line = iter->second;
 
             if(iter_end_sequence != end_sequence_map.end() && *iter_end_sequence < elem.address) {
-                elem.line.isEndSequence = true;
+                elem.line.isStartSequence = true;
                 iter_end_sequence = next_end_sequence(iter_end_sequence, end_sequence_map.end(), elem.address);
             }
 
@@ -274,7 +283,7 @@ DisassembledFile disassembleInput(std::istream & in, bool print_debug_info)
     //             for(size_t j = last_empty; j < i; ++j){
     //                 auto & previousLine = res.lines[j].line;
     //                 previousLine = iter->second;
-    //                 previousLine.isEndSequence = false;
+    //                 previousLine.isStartSequence = false;
     //                 last_empty = 0;
     //             }
     //         }

@@ -1,9 +1,9 @@
-// 
-// File: state_machine.h
-// Author: GrandChris
-// Date: 2021-03-18
-// Brief: The state machine to decode the line table
-//
+/// 
+/// \file: state_machine.h
+/// \author: GrandChris
+/// \date: 2021-03-18
+/// \brief: The state machine to decode the line table
+///
 
 #pragma once
 
@@ -13,6 +13,14 @@
 namespace dwarf {
     namespace debug_line {
 
+/// 
+/// \class   StateMachine
+/// \brief   The state machine to decode the line table
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \details http://dwarfstd.org/Download.php
+///          Currently only support for 'Dwarf3'
+///
 class StateMachine {
 public:
 
@@ -73,17 +81,10 @@ private:
     std::vector<StateMachineRegisters> mLineTable; // Result
 };
 
+//////////////////////////////////////////////////////
+// Function declerations
 
 std::vector<StateMachineRegisters> decode_data(Header const & header);
-
-
-
-///////////////////////////////////////////////////////////////////
-// implementation
-
-
-
-
 
     } // debug_line
 } // dwarf

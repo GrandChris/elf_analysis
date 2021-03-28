@@ -20,7 +20,7 @@ target_sources(unit_tests PRIVATE ${SOURCE_FILES_UNIT_TESTS})
     
  # Link libraries
 target_link_libraries(unit_tests PRIVATE 
-    elf_analysis
+    elf_analysis_lib
     gtest
     gtest_main
 )

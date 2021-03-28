@@ -12,7 +12,13 @@
 
 using namespace dwarf::debug_line;
 
-
+/// 
+/// \brief   Runs the state machine and decodes the data
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param header Decoded header including the data section 
+/// \return  An array with an entry for every different line
+///
 std::vector<StateMachineRegisters> dwarf::debug_line::decode_data(Header const & header)
 {
     StateMachine stateMachine(header);
@@ -20,14 +26,24 @@ std::vector<StateMachineRegisters> dwarf::debug_line::decode_data(Header const &
     return stateMachine.getLineTable();
 }
 
-// Constructor
+/// 
+/// \brief   Constructor
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param header Decoded header including the data section 
+///
 StateMachine::StateMachine(Header const & header) 
     : mHeader(header)
 {
     reset();
 }
 
-// processes a stream of opcodes
+/// 
+/// \brief   Processes a stream of opcodes
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param data Binary data after the header of the .debug_line section
+///
 void StateMachine::process(std::span<uint8_t const> data) 
 {
     for(size_t i = 0; i < data.size(); ++i) {
@@ -157,13 +173,21 @@ void StateMachine::process(std::span<uint8_t const> data)
     }
 }
 
+/// 
+/// \brief   Returns all currently disassembled lines
+/// \author  GrandChris
+/// \date    2021-03-18
+///
 std::vector<StateMachineRegisters> StateMachine::getLineTable() const
 {
     return mLineTable;
 }
 
-
-// sets the register to the initial state
+/// 
+/// \brief   Sets the registers to the initial state
+/// \author  GrandChris
+/// \date    2021-03-18
+///
 void StateMachine::reset() {
     mReg.address = 0;
     mReg.op_index = 0;

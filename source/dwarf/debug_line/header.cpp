@@ -1,9 +1,9 @@
-// 
-// File: header.cpp
-// Author: GrandChris
-// Date: 2021-03-19
-// Brief: The state machine to decode the line table
-//
+/// 
+/// File:   header.cpp
+/// Author: GrandChris
+/// Date:   2021-03-18
+/// Brief:  The header of the dwarf debug_line section
+///
 
 #include "dwarf/debug_line/header.h"
 #include "dwarf/leb128.h"
@@ -13,11 +13,11 @@
 
 using namespace dwarf::debug_line;
 
-//
-// \brief Prints the line table
-// \author GrandChris
-// \date 2021-03-18
-//
+///
+/// \brief  Prints the line table
+/// \author GrandChris
+/// \date   2021-03-18
+///
 void Header::print(std::ostream & ost) const
 {
     using namespace std;
@@ -60,21 +60,23 @@ void Header::print(std::ostream & ost) const
     ost << endl;
 }
 
-//
-// \brief Returns the size of the overall section
-// \author GrandChris
-// \date 2021-03-18
-//
+///
+/// \brief Returns the size of the header (including the following data)
+/// \author GrandChris
+/// \date 2021-03-18
+///
 size_t Header::size() const 
 {
     return uint_length + sizeof(uint_length);
 }
 
-//
-// \brief Parses the header from a data stream
-// \author GrandChris
-// \date 2021-03-18
-//
+///
+/// \brief Parses the header from the '.debug_line' section
+/// \author GrandChris
+/// \date 2021-03-18
+/// \param data Binary array where the first byte is the start of a header in the '.debug_line' section 
+/// \return  The decoded header
+///
 Header Header::read_one(std::span<uint8_t const> data) 
 {
     Header res = {};
@@ -142,7 +144,13 @@ Header Header::read_one(std::span<uint8_t const> data)
 }
 
 
-
+///
+/// \brief Parses all the headers from the '.debug_line' section
+/// \author GrandChris
+/// \date 2021-03-18
+/// \param data Binary array where the first byte is the start of a header in the '.debug_line' section 
+/// \return  The decoded headers
+///
 std::vector<Header> Header::read(std::span<uint8_t const> data) 
 {
     std::vector<Header> res;

@@ -2,7 +2,7 @@
 // File: uleb128.h
 // Author: GrandChris
 // Date: 2021-03-18
-// Brief: Decodes a uleb128 number
+// Brief: Decodes LEB128 numbers
 //
 
 #pragma once
@@ -11,7 +11,15 @@
 #include <cstddef>
 #include <span>
 
-
+/// 
+/// \brief   Decodes an unsigned Little Endian Base 128 (LEB128) encoded number
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param data Byte array
+/// \param result The decoded number
+/// \return  The number of bytes read from the data
+/// \details https://en.wikipedia.org/wiki/LEB128
+///
 inline size_t decodeUleb128(std::span<uint8_t const> const data, uint64_t & result) 
 {
     size_t n = 0;
@@ -39,7 +47,15 @@ inline size_t decodeUleb128(std::span<uint8_t const> const data, uint64_t & resu
     }    
 }
 
-
+/// 
+/// \brief   Decodes a signed Little Endian Base 128 (LEB128) encoded number
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param data Byte array
+/// \param result The decoded number
+/// \return  The number of bytes read from the data
+/// \details https://en.wikipedia.org/wiki/LEB128
+///
 inline size_t decodeSleb128(std::span<uint8_t const> const data, uint64_t & result) 
 {
     size_t n = 0;

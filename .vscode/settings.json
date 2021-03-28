@@ -61,7 +61,11 @@
         "cstring": "cpp",
         "cinttypes": "cpp",
         "codecvt": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "xmemory": "cpp",
+        "xstring": "cpp",
+        "xutility": "cpp",
+        "xlocale": "cpp"
     },
     "editor.detectIndentation": false
 }

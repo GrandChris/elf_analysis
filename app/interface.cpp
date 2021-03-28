@@ -33,16 +33,6 @@
 extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
-void sayHi() {
-  printf("Hi!\n");
-}
-
-EMSCRIPTEN_KEEPALIVE
-int daysInWeek() {
-  return 7;
-}
-
-EMSCRIPTEN_KEEPALIVE
 unsigned int elf_analysis_analyse_data(uint8_t * data, unsigned int size);
 
 
@@ -75,7 +65,7 @@ EMSCRIPTEN_KEEPALIVE
 unsigned int elf_analysis_get_line_column(unsigned int line);
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int elf_analysis_get_line_isEndSequence(unsigned int line);
+unsigned int elf_analysis_get_line_isStartSequence(unsigned int line);
 
 
 EMSCRIPTEN_KEEPALIVE
@@ -91,17 +81,7 @@ EMSCRIPTEN_KEEPALIVE
 unsigned int elf_analysis_get_branch_destination_line_column(unsigned int line);
 
 EMSCRIPTEN_KEEPALIVE
-unsigned int elf_analysis_get_branch_destination_line_isEndSequence(unsigned int line);
-
-
-// char const * get_filename(unsigned int table, unsigned int index);
-
-// EMSCRIPTEN_KEEPALIVE
-// char const * get_target_line(unsigned int table, unsigned int index);
-// char const * get_target_line(unsigned int table, unsigned int index);
-
-// EMSCRIPTEN_KEEPALIVE
-// void delete_table(unsigned int table);
+unsigned int elf_analysis_get_branch_destination_line_isStartSequence(unsigned int line);
 
 }
 
@@ -115,162 +95,217 @@ DisassembledFile disassembledFile = {};
 
 extern "C" {
 
+/// 
+/// \brief   Analyses the data and stores the result in a static variable
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param data Raw byte array of a .elf file 
+/// \param size Size of the array
+/// \return  true
+///
 unsigned int elf_analysis_analyse_data(uint8_t * data, unsigned int size) {
-    // std::cout << "passed parameter, size: " << std::endl;
     disassembledFile = disassembleData(data, size, false);
     return true;
 }
 
-
+/// 
+/// \brief   Returns the filename if available, otherwise returns ""
+/// \author  GrandChris
+/// \date    2021-03-18
+///
 char const * elf_analysis_get_filename() {
     return disassembledFile.filename.c_str();
 }
 
+/// 
+/// \brief   Returns the number of lines in the lines array
+/// \author  GrandChris
+/// \date    2021-03-18
+///
 unsigned int elf_analysis_get_lines_size() {
     return disassembledFile.lines.size();
 }
 
+/// 
+/// \brief   Returns the program address of the line
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 unsigned int elf_analysis_get_address(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return 0;
+    }
+
     return disassembledFile.lines[line].address;
 }
 
+/// 
+/// \brief   Returns the opcode as mnemonic with operaands
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 char const * elf_analysis_get_opcode_description(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return "";
+    }
+
     return disassembledFile.lines[line].opcode_description.c_str();
 }
 
+/// 
+/// \brief   Returns program address of the destination of the branch instruction
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 unsigned int elf_analysis_get_branch_destination(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return 0;
+    }
+
     return disassembledFile.lines[line].branch_destination;
 }
 
-
+/// 
+/// \brief   Returns the filename corresponding to that line
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 char const * elf_analysis_get_line_filename(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return "";
+    }
+
     return disassembledFile.lines[line].line.filename.c_str();
 }
 
+/// 
+/// \brief   Returns the path (without filename) corresponding to that line
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 char const * elf_analysis_get_line_path(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return "";
+    }
+
     return disassembledFile.lines[line].line.path.c_str();
 }
 
+/// 
+/// \brief   Returns the line number in the file
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 unsigned int elf_analysis_get_line_line(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return 0;
+    }
+
     return disassembledFile.lines[line].line.line;
 }
 
+/// 
+/// \brief   Returns the column number in the file
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 unsigned int elf_analysis_get_line_column(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return 0;
+    }
+
     return disassembledFile.lines[line].line.column;
 }
 
-unsigned int elf_analysis_get_line_isEndSequence(unsigned int line) {
-    return disassembledFile.lines[line].line.isEndSequence;
+/// 
+/// \brief   Returns if the instruction is the beginning of a new function
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
+unsigned int elf_analysis_get_line_isStartSequence(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return false;
+    }
+
+    return disassembledFile.lines[line].line.isStartSequence;
 }
 
-
+/// 
+/// \brief   Returns the filename corresponding to the branch destination
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 char const * elf_analysis_get_branch_destination_line_filename(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return "";
+    }
+
     return disassembledFile.lines[line].branch_destination_line.filename.c_str();
 }
 
+/// 
+/// \brief   Returns the path (without filename) corresponding to the branch destination
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 char const * elf_analysis_get_branch_destination_line_path(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return "";
+    }
+
     return disassembledFile.lines[line].branch_destination_line.path.c_str();
 }
 
+/// 
+/// \brief   Returns the line number in the file of the branch destination
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 unsigned int elf_analysis_get_branch_destination_line_line(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return 0;
+    }
+
     return disassembledFile.lines[line].branch_destination_line.line;
 }
 
+/// 
+/// \brief   Returns the column number in the file of the branch destination
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
 unsigned int elf_analysis_get_branch_destination_line_column(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return 0;
+    }
+
     return disassembledFile.lines[line].branch_destination_line.column;
 }
 
-unsigned int elf_analysis_get_branch_destination_line_isEndSequence(unsigned int line) {
-    return disassembledFile.lines[line].branch_destination_line.isEndSequence;
+/// 
+/// \brief   Returns if the instruction of the branch destination is the beginning of a new function
+/// \author  GrandChris
+/// \date    2021-03-18
+/// \param line Index in the lines array  
+///
+unsigned int elf_analysis_get_branch_destination_line_isStartSequence(unsigned int line) {
+    if(line >= disassembledFile.lines.size()) {
+        return false;
+    }
+
+    return disassembledFile.lines[line].branch_destination_line.isStartSequence;
 }
 
-
 }
-
-
-
-
-// #include "disassembler.h"
-// #include <iostream>
-// #include <vector>
-
-
-// struct branch {
-//     uint32_t source_address;
-//     std::string source_line;
-//     uint32_t target_address;
-//     std::string target_line;
-// };
-
-// std::vector<branch> branches;
-
-
-// extern "C" {
-
-// // EMSCRIPTEN_KEEPALIVE
-// // int create_address_table(char const * filename) {
-// //     try
-// //     {
-// //         std::cout << "filename: " << filename << std::endl;
-
-// //         branches.clear();
-
-// //         // read elf file
-// //         auto const loader = std::make_shared<elf_file_loader>(filename);
-// //         elf::elf ef(loader);
-// //         auto const elf_loader = dwarf::elf::create_loader(ef);
-// //         dwarf::dwarf dw(elf_loader);
-
-// //         // parse .text section
-// //         auto const & text = ef.get_section(".text");
-// //         uint8_t const * data2 = static_cast<uint8_t const *>(text.data());
-// //         disassembler dis(CS_ARCH_ARM, CS_MODE_THUMB);
-
-// //         auto const data2_span = std::span(data2, text.size());
-// //         auto code = dis(data2_span, text.get_hdr().addr);
-
-// //         for(auto & elem : code) {
-
-// //             if(elem.id == ARM_INS_BL) {
-// //                 uint32_t const sourceAddress = static_cast<uint32_t>(elem.address);
-// //                 uint32_t targetAddress = 0;
-// //                 if(elem.detail->arm.op_count == 1) {
-// //                     targetAddress = elem.detail->arm.operands[0].imm;
-// //                 }
-
-// //                 branches.push_back({.source_address = sourceAddress, .target_address = targetAddress});
-// //             }
-// //         }
-
-// //         // map addresses to lines
-// //         for(auto & elem: branches) {
-// //             elem.source_line = find_address(dw, elem.source_address);
-// //             elem.target_line = find_address(dw, elem.target_address);
-// //         }
-// //     }
-// //     catch (std::exception const &e)
-// //     {
-// //         std::cout << e.what() <<  std::endl;
-// //         return 1;
-// //     }
-
-// //      std::cout << "finished" <<  std::endl;
-// //     return 0;
-// // }
-
-// EMSCRIPTEN_KEEPALIVE
-// unsigned int table_size() {
-//     return branches.size();
-// }
-
-// EMSCRIPTEN_KEEPALIVE
-// char const * get_source_line(unsigned int index){
-//     return branches[index].source_line.c_str();
-// }
-
-// EMSCRIPTEN_KEEPALIVE
-// char const * get_target_line(unsigned int index){
-//     return branches[index].target_line.c_str();
-// }
-
-// }

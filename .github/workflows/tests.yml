@@ -32,15 +32,23 @@ jobs:
     - name: Build
       run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/build_debug.sh"
 
-    - name: Test
-      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/test.sh"
+    # Build emscripten version
+
+    - name: Configure CMake emscripten
+      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/cmake_configure_emcc.sh"
+
+    - name: Build
+      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/build_debug_emcc.sh"
+
+    # - name: Test
+    #   run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/test.sh"
 
       # Build and test release version
 
-    - name: Configure CMake release
+    # - name: Configure CMake release
 
-    - name: Build
-      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/build_release.sh"
+    # - name: Build
+    #   run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/build_release.sh"
 
-    - name: Test
-      run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/test.sh"
+    # - name: Test
+    #   run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/test.sh"
