@@ -32,6 +32,8 @@ jobs:
     - name: Build
       run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/build_debug.sh"
 
+
+
     # Build emscripten version
 
     - name: Configure CMake emscripten
@@ -39,6 +41,21 @@ jobs:
 
     - name: Build
       run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/build_debug_emcc.sh"
+
+
+    # Archive artifacts
+
+    - name: Archive GCC build artifacts
+      uses: actions/upload-artifact@v2
+        with:
+          name: app
+          path: build/app/*.exe
+
+    - name: Archive emscripten build artifacts
+      uses: actions/upload-artifact@v2
+        with:
+          name: wasm_lib
+          path: build_emcc/app/*.js
 
     # - name: Test
     #   run: docker run -v $(pwd):/srv -w/srv local_docker_image /bin/bash "./scripts/test.sh"
