@@ -7,7 +7,7 @@ is compiled to WebAssembly using [Emscripten](https://emscripten.org/) to be use
 
 ### What it does
 
-- Parses a .elf file using [elfio](https://github.com/serge1/ELFIO)
+- Parses an .elf file using [elfio](https://github.com/serge1/ELFIO)
 - Disassembles the '.text' section using [capstone](https://github.com/aquynh/capstone)
 - Decodes the '.debug_line' section using a diy implementation
 - Provides a C interface to access the data
@@ -20,6 +20,11 @@ is compiled to WebAssembly using [Emscripten](https://emscripten.org/) to be use
 - Code is compiled using GCC 10
 - Code is compiled using [Emscripten](https://emscripten.org/)
 
+
+## Limitations
+- It is designed to work with small codebase (for embedded development)
+- It supports only ARM Thumb Code for the '.text' section and Dwarf 3 debug information (standard when building with GCC)  in the '.debug_line' section
+- It also has a limited support for x86-64 Code (no guarantees here)
 
 ## How to build
 #### GCC
